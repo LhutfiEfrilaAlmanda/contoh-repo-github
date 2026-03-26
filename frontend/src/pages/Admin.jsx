@@ -49,7 +49,7 @@ export default function Admin() {
     useEffect(() => {
         const fetchDashboard = async () => {
             try {
-                const res = await api.get('/stats/dashboard');
+                const res = await api.get('stats/dashboard');
                 setStats({
                     programCount: res.data.programCount || 0,
                     partnerCount: res.data.partnerCount || 0,

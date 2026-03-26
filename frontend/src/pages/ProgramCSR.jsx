@@ -11,7 +11,7 @@ export default function ProgramCSR() {
     const [newCategory, setNewCategory] = useState('');
 
     useEffect(() => {
-        Promise.all([api.get('/programs'), api.get('/categories'), api.get('/locations')])
+        Promise.all([api.get('programs'), api.get('categories'), api.get('locations')])
             .then(([p, c, l]) => {
                 setPrograms(Array.isArray(p.data) ? p.data : (p.data?.data || []));
                 setCategories(c.data || []);
@@ -25,8 +25,8 @@ export default function ProgramCSR() {
         e.preventDefault();
         if (!newCategory.trim()) return;
         try {
-            await api.post('/categories', { name: newCategory.trim() });
-            const c = await api.get('/categories');
+            await api.post('categories', { name: newCategory.trim() });
+            const c = await api.get('categories');
             setCategories(c.data || []);
             setNewCategory('');
             alert('Kelompok program berhasil ditambahkan!');
@@ -36,8 +36,8 @@ export default function ProgramCSR() {
     const handleDeleteCategory = async (catName) => {
         if (!window.confirm(`Yakin hapus kelompok "${catName}"?`)) return;
         try {
-            await api.delete('/categories/' + encodeURIComponent(catName));
-            const c = await api.get('/categories');
+            await api.delete('categories/' + encodeURIComponent(catName));
+            const c = await api.get('categories');
             setCategories(c.data || []);
         } catch (err) { alert('Gagal menghapus.'); }
     };
@@ -75,10 +75,10 @@ export default function ProgramCSR() {
         };
         try {
             if (editItem) {
-                await api.put('/programs/' + editItem.id, item);
+                await api.put('programs/' + editItem.id, item);
                 setPrograms(prev => prev.map(x => x.id === editItem.id ? { ...x, ...item } : x));
             } else {
-                const r = await api.post('/programs', item);
+                const r = await api.post('programs', item);
                 setPrograms(prev => [...prev, r.data]);
             }
             setEditItem(null); e.target.reset();
@@ -89,7 +89,7 @@ export default function ProgramCSR() {
     const handleDelete = async (id) => {
         if (!window.confirm('Yakin hapus program ini?')) return;
         try {
-            await api.delete('/programs/' + id);
+            await api.delete('programs/' + id);
             setPrograms(prev => prev.filter(x => x.id !== id));
         } catch (err) { alert('Gagal menghapus.'); }
     };

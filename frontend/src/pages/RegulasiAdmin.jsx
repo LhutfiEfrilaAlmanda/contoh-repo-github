@@ -6,7 +6,7 @@ export default function RegulasiAdmin() {
     const [editItem, setEditItem] = useState(null);
 
     useEffect(() => {
-        api.get('/regulations').then(r => setRegulations(r.data || []))
+        api.get('regulations').then(r => setRegulations(r.data || []))
             .catch(e => console.error('Gagal load regulasi:', e));
     }, []);
 
@@ -17,10 +17,10 @@ export default function RegulasiAdmin() {
 
         try {
             if (editItem) {
-                const r = await api.put('/regulations/' + editItem.id, fd, config);
+                const r = await api.put('regulations/' + editItem.id, fd, config);
                 setRegulations(prev => prev.map(x => x.id === editItem.id ? r.data : x));
             } else {
-                const r = await api.post('/regulations', fd, config);
+                const r = await api.post('regulations', fd, config);
                 setRegulations(prev => [...prev, r.data]);
             }
             setEditItem(null); e.target.reset();
@@ -31,7 +31,7 @@ export default function RegulasiAdmin() {
     const handleDelete = async (id) => {
         if (!window.confirm('Yakin hapus regulasi ini?')) return;
         try {
-            await api.delete('/regulations/' + id);
+            await api.delete('regulations/' + id);
             setRegulations(prev => prev.filter(x => x.id !== id));
         } catch (err) { alert('Gagal menghapus.'); }
     };

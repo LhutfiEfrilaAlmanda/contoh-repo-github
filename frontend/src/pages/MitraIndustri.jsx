@@ -14,10 +14,10 @@ export default function MitraIndustri() {
         const loadData = async () => {
             try {
                 const [p, s, sub, prog] = await Promise.all([
-                    api.get('/partners'),
-                    api.get('/sectors'),
-                    api.get('/submissions'),
-                    api.get('/programs')
+                    api.get('partners'),
+                    api.get('sectors'),
+                    api.get('submissions'),
+                    api.get('programs')
                 ]);
                 setPartners(p.data || []);
                 setSectors(s.data || []);
@@ -45,10 +45,10 @@ export default function MitraIndustri() {
         };
         try {
             if (editItem) {
-                await api.put('/partners/' + editItem.id, item);
+                await api.put('partners/' + editItem.id, item);
                 setPartners(prev => prev.map(x => x.id === editItem.id ? { ...x, ...item } : x));
             } else {
-                const r = await api.post('/partners', item);
+                const r = await api.post('partners', item);
                 setPartners(prev => [...prev, r.data]);
             }
             setEditItem(null); e.target.reset();
@@ -59,7 +59,7 @@ export default function MitraIndustri() {
     const handleDeleteMitra = async (id) => {
         if (!window.confirm('Yakin hapus mitra ini?')) return;
         try {
-            await api.delete('/partners/' + id);
+            await api.delete('partners/' + id);
             setPartners(prev => prev.filter(x => x.id !== id));
         } catch (err) { alert('Gagal menghapus.'); }
     };
@@ -71,7 +71,7 @@ export default function MitraIndustri() {
             const sub = submissions.find(s => s.id === subId);
             if (!sub) return;
             const updated = { ...sub, status: newStatus };
-            await api.put(`/submissions/${subId}`, updated);
+            await api.put(`submissions/${subId}`, updated);
             setSubmissions(prev => prev.map(s => s.id === subId ? updated : s));
             alert(`Berhasil. Status diubah menjadi ${newStatus}`);
         } catch (error) {

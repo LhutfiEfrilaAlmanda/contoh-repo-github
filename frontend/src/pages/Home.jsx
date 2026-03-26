@@ -48,7 +48,7 @@ function ProgramModal({ program, onClose }) {
             submittedAt: new Date().toISOString().split('T')[0]
         };
         try {
-            await api.post('/submissions', submission);
+            await api.post('submissions', submission);
         } catch (err) { console.error('Gagal kirim:', err); }
         setSubmitted(true);
         setTimeout(() => { setSubmitted(false); setShowForm(false); onClose(); }, 4000);
@@ -206,7 +206,7 @@ const Home = () => {
         setIsTyping(true);
 
         try {
-            const res = await api.post('/chat', {
+            const res = await api.post('chat', {
                 message: userInput,
                 contextProgramId: lastProgramId
             });
@@ -226,8 +226,8 @@ const Home = () => {
         const loadData = async () => {
             try {
                 const [progRes, catRes] = await Promise.all([
-                    api.get('/programs'),
-                    api.get('/categories')
+                    api.get('programs'),
+                    api.get('categories')
                 ]);
 
                 if (catRes.data && Array.isArray(catRes.data)) {

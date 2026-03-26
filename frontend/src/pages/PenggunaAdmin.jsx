@@ -8,7 +8,7 @@ export default function PenggunaAdmin() {
     const [editItem, setEditItem] = useState(null);
 
     useEffect(() => {
-        api.get('/users').then(r => setUsers(r.data || []))
+        api.get('users').then(r => setUsers(r.data || []))
             .catch(e => console.error('Gagal load pengguna:', e));
     }, []);
 
@@ -18,7 +18,7 @@ export default function PenggunaAdmin() {
         const item = { name: fd.get('name'), email: fd.get('email'), role: fd.get('role') };
         try {
             if (editItem) {
-                await api.put('/users/' + editItem.id, item);
+                await api.put('users/' + editItem.id, item);
                 setUsers(prev => prev.map(x => x.id === editItem.id ? { ...x, ...item } : x));
                 setEditItem(null); e.target.reset();
                 alert('Pengguna berhasil diperbarui!');
@@ -29,7 +29,7 @@ export default function PenggunaAdmin() {
     const handleDelete = async (id) => {
         if (!window.confirm('Yakin hapus pengguna ini?')) return;
         try {
-            await api.delete('/users/' + id);
+            await api.delete('users/' + id);
             setUsers(prev => prev.filter(x => x.id !== id));
         } catch (err) { alert('Gagal menghapus.'); }
     };

@@ -14,15 +14,15 @@ const MitraPage = () => {
             setIsLoading(true);
             try {
                 // Fetch Partners
-                const pRes = await api.get('/partners');
+                const pRes = await api.get('partners');
                 setPartners(pRes.data);
 
                 // Fetch Submissions (Kontribusi)
-                const sRes = await api.get('/submissions');
+                const sRes = await api.get('submissions');
                 setSubmissions(sRes.data);
 
                 // Fetch Programs for resolving Program Titles
-                const progRes = await api.get('/programs');
+                const progRes = await api.get('programs');
                 // Handle different API response structures just in case
                 const progData = Array.isArray(progRes.data) ? progRes.data : (progRes.data.data || []);
                 setPrograms(progData);

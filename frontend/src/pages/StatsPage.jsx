@@ -12,7 +12,7 @@ const StatsPage = () => {
         const fetchStats = async () => {
             try {
                 // Diambil dari backend API gateway port 5000 -> 5005 (Stats)
-                const response = await api.get('/stats/dashboard');
+                const response = await api.get('stats/dashboard');
                 setStats(response.data);
             } catch (error) {
                 console.error("Error fetching stats:", error);

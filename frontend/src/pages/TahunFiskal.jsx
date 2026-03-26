@@ -6,7 +6,7 @@ export default function TahunFiskal() {
     const [editItem, setEditItem] = useState(null);
 
     useEffect(() => {
-        api.get('/fiscal-years').then(r => setFiscalYears(r.data || []))
+        api.get('fiscal-years').then(r => setFiscalYears(r.data || []))
             .catch(e => console.error('Gagal load tahun fiskal:', e));
     }, []);
 
@@ -21,10 +21,10 @@ export default function TahunFiskal() {
 
         try {
             if (editItem) {
-                await api.put('/fiscal-years/' + editItem.id, item);
+                await api.put('fiscal-years/' + editItem.id, item);
                 setFiscalYears(prev => prev.map(x => x.id === editItem.id ? { ...x, ...item } : x));
             } else {
-                const r = await api.post('/fiscal-years', item);
+                const r = await api.post('fiscal-years', item);
                 setFiscalYears(prev => [r.data, ...prev]);
             }
             setEditItem(null);
@@ -39,7 +39,7 @@ export default function TahunFiskal() {
     const handleDelete = async (id) => {
         if (!window.confirm('Yakin menghapus tahun fiskal ini?')) return;
         try {
-            await api.delete('/fiscal-years/' + id);
+            await api.delete('fiscal-years/' + id);
             setFiscalYears(prev => prev.filter(x => x.id !== id));
             alert('Tahun fiskal dihapus.');
         } catch (err) {
@@ -52,11 +52,11 @@ export default function TahunFiskal() {
             // Set semua jadi Inactive dulu, lalu set yang dipilih jadi Active
             for (const fy of fiscalYears) {
                 if (fy.id !== id && fy.status === 'Active') {
-                    await api.put('/fiscal-years/' + fy.id, { ...fy, status: 'Inactive' });
+                    await api.put('fiscal-years/' + fy.id, { ...fy, status: 'Inactive' });
                 }
             }
             const target = fiscalYears.find(f => f.id === id);
-            await api.put('/fiscal-years/' + id, { ...target, status: 'Active' });
+            await api.put('fiscal-years/' + id, { ...target, status: 'Active' });
             setFiscalYears(prev => prev.map(x => ({ ...x, status: x.id === id ? 'Active' : 'Inactive' })));
             alert('Tahun fiskal aktif diperbarui.');
         } catch (err) {

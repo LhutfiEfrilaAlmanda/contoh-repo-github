@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 
 const RegulationPage = () => {
     const [regulations, setRegulations] = useState([]);
@@ -7,7 +7,7 @@ const RegulationPage = () => {
     useEffect(() => {
         const fetchRegulations = async () => {
             try {
-                const res = await api.get('/regulations');
+                const res = await api.get('regulations');
                 if (res.data && res.data.length > 0) {
                     setRegulations(res.data);
                 }
@@ -42,7 +42,7 @@ const RegulationPage = () => {
                             </div>
                             <p className="text-slate-600 text-sm mb-6 leading-relaxed line-clamp-3">{r.description}</p>
                             {r.fileUrl ? (
-                                <a href={`http://localhost:5000${r.fileUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider hover:gap-4 transition-all">
+                                <a href={`${BASE_URL}${r.fileUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider hover:gap-4 transition-all">
                                     Unduh Berkas →
                                 </a>
                             ) : (

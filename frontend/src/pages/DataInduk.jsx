@@ -14,9 +14,9 @@ export default function DataInduk() {
         const fetchMasterData = async () => {
             try {
                 const [profRes, secRes, locRes] = await Promise.all([
-                    api.get('/org-profile'),
-                    api.get('/sectors'),
-                    api.get('/locations')
+                    api.get('org-profile'),
+                    api.get('sectors'),
+                    api.get('locations')
                 ]);
                 setOrgProfile(profRes.data || {});
                 setLogoPreview(profRes.data?.logo || null);
@@ -33,12 +33,12 @@ export default function DataInduk() {
         if (!window.confirm(`Yakin menghapus ${id}?`)) return;
         try {
             if (type === 'sector') {
-                await api.delete('/sectors/' + encodeURIComponent(id));
+                await api.delete('sectors/' + encodeURIComponent(id));
             } else if (type === 'location') {
-                await api.delete('/locations/' + encodeURIComponent(id));
+                await api.delete('locations/' + encodeURIComponent(id));
             }
             // Re-fetch to get neat ordering and IDs
-            const [secRes, locRes] = await Promise.all([api.get('/sectors'), api.get('/locations')]);
+            const [secRes, locRes] = await Promise.all([api.get('sectors'), api.get('locations')]);
             setSectors(secRes.data);
             setLocations(locRes.data);
             alert('Data berhasil dihapus.');
@@ -56,7 +56,7 @@ export default function DataInduk() {
         formData.append('logo', file);
 
         try {
-            const res = await api.post('/upload', formData, {
+            const res = await api.post('upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             if (res.data && res.data.url) {
@@ -85,7 +85,7 @@ export default function DataInduk() {
                 logo: logoPreview
             };
             try {
-                await api.post('/org-profile', updatedProfile);
+                await api.post('org-profile', updatedProfile);
                 setOrgProfile(updatedProfile);
                 alert('Profil Organisasi berhasil disimpan ke Database!');
             } catch (error) {
@@ -97,7 +97,7 @@ export default function DataInduk() {
             const val = isSector ? fd.get('sectorName') : fd.get('locationName');
             if (!val || !val.trim()) { alert('Nama tidak boleh kosong.'); return; }
 
-            const apiEndpoint = isSector ? '/sectors' : '/locations';
+            const apiEndpoint = isSector ? 'sectors' : 'locations';
 
             try {
                 if (editItem) {
@@ -106,7 +106,7 @@ export default function DataInduk() {
                 await api.post(apiEndpoint, { name: val.trim() });
 
                 // Re-fetch to get neat ordering and IDs
-                const [secRes, locRes] = await Promise.all([api.get('/sectors'), api.get('/locations')]);
+                const [secRes, locRes] = await Promise.all([api.get('sectors'), api.get('locations')]);
                 setSectors(secRes.data);
                 setLocations(locRes.data);
 

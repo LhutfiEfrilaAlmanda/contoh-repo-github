@@ -543,7 +543,7 @@ app.post('/api/reports/upload', uploadReport.single('file'), async (req, res) =>
             [newId, nama_file, tipe_file, ukuran_file, path_url, diunggah_oleh, tanggal_unggah, id_mitra || null, id_program || null]
         );
 
-        const fileUrl = `http://localhost:${PORT}${path_url}`;
+        const fileUrl = path_url;
         res.json({
             message: 'File berhasil diunggah',
             url: fileUrl,

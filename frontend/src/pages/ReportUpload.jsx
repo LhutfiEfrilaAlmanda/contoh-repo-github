@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import {
     Upload, FileText, Trash2, Download, CheckCircle2,
@@ -24,7 +24,7 @@ const ReportUpload = () => {
 
     const fetchReports = async () => {
         try {
-            const res = await api.get('/reports');
+            const res = await api.get('reports');
             setReports(res.data);
         } catch (err) {
             console.error('Gagal memuat daftar laporan:', err);
@@ -79,7 +79,7 @@ const ReportUpload = () => {
         if (formData.id_program) data.append('id_program', formData.id_program);
 
         try {
-            const res = await api.post('/reports/upload', data, {
+            const res = await api.post('reports/upload', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -303,7 +303,7 @@ const ReportUpload = () => {
                                             </td>
                                             <td className="py-4 px-4 text-right">
                                                 <a
-                                                    href={`http://localhost:5000${r.path_url}`}
+                                                    href={`${BASE_URL}${r.path_url}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-indigo-600 font-bold text-xs hover:text-indigo-800 inline-flex items-center gap-1"
