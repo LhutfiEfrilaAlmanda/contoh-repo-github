@@ -11,14 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use((req, res, next) => {
+    // Jalankan log untuk debug di Railway
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Accept, Origin');
+    
     if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
+        return res.sendStatus(200);
     }
+    next();
 });
 app.use(express.json());
 app.use((req, res, next) => {
@@ -110,6 +113,7 @@ const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
 
 // Authentication Login Endpoint
 app.post('/api/auth/login', async (req, res) => {
+    console.log('LOGIN ATTEMPT:', req.body?.email);
     const { email, password } = req.body;
     try {
         const [users] = await pool.query('SELECT * FROM pengguna WHERE email = ?', [email]);
