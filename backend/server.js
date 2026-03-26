@@ -127,7 +127,7 @@ const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
 ================================ */
 
 // Authentication Login Endpoint (alternative path for Railway compatibility)
-app.post('/api/login', async (req, res) => {
+app.post('/api/verify-access', async (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     console.log('LOGIN ATTEMPT (alt):', req.body?.email);
