@@ -1,0 +1,18 @@
+{
+    "name": "portal-csr-microservices",
+    "version": "1.0.0",
+    "description": "Root workspace to start all services and frontend",
+    "main": "index.js",
+    "scripts": {
+        "start:backend": "node backend/server.js",
+        "start:frontend": "cd frontend && npm run dev",
+        "start:all": "concurrently \"npm run start:backend\" \"npm run start:frontend\""
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1",
+        "mysql2": "^3.19.0"
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.3"
+    }
+}
