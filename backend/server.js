@@ -11,17 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    }
+    // UNCONDITIONAL CORS HEADERS
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    if (req.method === 'OPTIONS') {
+        console.log(`[${new Date().toISOString()}] Handled OPTIONS pre-flight for ${req.url}`);
+        return res.sendStatus(200);
+    }
     next();
 });
 
@@ -136,13 +136,15 @@ app.post('/api/auth/login', async (req, res) => {
         console.log('USERS FOUND:', users.length);
 
         if (users.length === 0) {
-            // As a fallback for demo purposes, if they try 'admin@portalcsr.id', but it's not in DB
+            console.log('USER NOT FOUND IN DB, TRYING BYPASS FOR:', email);
             if (email === 'admin@portalcsr.id' || email === 'admin@pemda.go.id') {
+                console.log('BYPASS SUCCESS FOR:', email);
                 return res.json({
                     token: 'dummy-jwt-token-admin',
                     user: { id: '1', name: 'Admin Utama', email: email, role: 'Super Admin' }
                 });
             }
+            console.log('LOGIN FAILED: NO BYPASS MATCH FOR:', email);
             return res.status(401).json({ error: 'Email atau password salah.' });
         }
 
