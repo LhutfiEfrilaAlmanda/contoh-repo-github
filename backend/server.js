@@ -11,10 +11,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use((req, res, next) => {
-    // Alamat Vercel kamu (atau * untuk sementara)
-    const allowedOrigins = ['https://portalcsr.vercel.app', 'http://localhost:5173', 'https://contoh-repo-github-production.up.railway.app'];
     const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
+    
+    // Selalu izinkan origin yang memanggil (untuk kredensial)
+    if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
         res.setHeader('Access-Control-Allow-Origin', '*');
