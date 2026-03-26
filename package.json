@@ -4,6 +4,7 @@
     "description": "Root workspace to start all services and frontend",
     "main": "index.js",
     "scripts": {
+        "start": "node backend/server.js",
         "start:backend": "node backend/server.js",
         "start:frontend": "cd frontend && npm run dev",
         "start:all": "concurrently \"npm run start:backend\" \"npm run start:frontend\""
