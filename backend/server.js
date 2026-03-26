@@ -10,13 +10,25 @@ const { pool, initDB } = require('./database.js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-    origin: (origin, callback) => callback(null, true), // Allow all origins and reflect them
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-}));
-app.options('*', cors());
+app.use((req, res, next) => {
+    // Alamat Vercel kamu (atau * untuk sementara)
+    const allowedOrigins = ['https://portalcsr.vercel.app', 'http://localhost:5173', 'https://contoh-repo-github-production.up.railway.app'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
