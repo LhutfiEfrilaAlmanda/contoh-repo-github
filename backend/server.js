@@ -131,7 +131,9 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('LOGIN ATTEMPT:', req.body?.email);
     const { email, password } = req.body;
     try {
+        console.log('QUERYING USER:', email);
         const [users] = await pool.query('SELECT * FROM pengguna WHERE email = ?', [email]);
+        console.log('USERS FOUND:', users.length);
 
         if (users.length === 0) {
             // As a fallback for demo purposes, if they try 'admin@portalcsr.id', but it's not in DB
@@ -702,8 +704,13 @@ app.get('/', (req, res) => {
 // Generic Error Handler
 app.use((err, req, res, next) => {
     console.error('SERVER CRASH PREVENTED:', err.stack);
+    
+    // Pastikan CORS tetap terkirim saat error
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     if (!res.headersSent) {
-        res.status(500).send('Terjadi kesalahan pada server. Harap refresh halaman.');
+        res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
     }
 });
 
