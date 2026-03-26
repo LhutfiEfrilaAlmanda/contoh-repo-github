@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://contoh-repo-github-production.up.railway.app/api/:path*"
-    }
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }

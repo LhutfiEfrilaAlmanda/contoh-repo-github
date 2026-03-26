@@ -10,16 +10,15 @@ const { pool, initDB } = require('./database.js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        callback(null, origin || '*');
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
-};
-
-app.use(cors(corsOptions));
+// Manual CORS middleware - replaces cors package which was failing on POST
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    next();
+});
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
