@@ -12,22 +12,26 @@ const PORT = process.env.PORT || 5000;
 
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    
-    // Selalu izinkan origin yang memanggil (untuk kredensial)
     if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
         res.setHeader('Access-Control-Allow-Origin', '*');
     }
-    
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
+});
+
+// Diagnostic Endpoints
+app.get('/api/health-check', (req, res) => res.json({ status: 'ok', serverTime: new Date().toISOString() }));
+app.get('/api/debug-routes', (req, res) => {
+    const routes = app._router.stack
+        .filter(r => r.route)
+        .map(r => ({ path: r.route.path, methods: Object.keys(r.route.methods) }));
+    res.json(routes);
 });
 
 app.use((req, res, next) => {
