@@ -10,17 +10,16 @@ const { pool, initDB } = require('./database.js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use(cors({
+    origin: (origin, callback) => callback(null, true), // Allow all origins and reflect them
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+}));
+app.options('*', cors());
+
 app.use((req, res, next) => {
-    // Jalankan log untuk debug di Railway
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, Accept, Origin');
-    
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
     next();
 });
 app.use(express.json());
