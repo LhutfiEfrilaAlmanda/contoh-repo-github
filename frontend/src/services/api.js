@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Gunakan env variable untuk production, fallback ke localhost untuk development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://contoh-repo-github-production.up.railway.app/api';
 export const BASE_URL = API_URL.replace(/\/api$/, '');
 
 const api = axios.create({

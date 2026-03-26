@@ -10,8 +10,17 @@ const { pool, initDB } = require('./database.js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-app.options('*', cors());
+const corsOptions = {
+    origin: function (origin, callback) {
+        callback(null, origin || '*');
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
