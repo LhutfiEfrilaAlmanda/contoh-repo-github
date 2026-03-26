@@ -128,28 +128,27 @@ const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
 
 // Authentication Login Endpoint
 app.post('/api/auth/login', async (req, res) => {
+    // Force CORS headers on this specific route
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     console.log('LOGIN ATTEMPT:', req.body?.email);
     const { email, password } = req.body;
     try {
-        console.log('QUERYING USER:', email);
         const [users] = await pool.query('SELECT * FROM pengguna WHERE email = ?', [email]);
         console.log('USERS FOUND:', users.length);
 
         if (users.length === 0) {
-            console.log('USER NOT FOUND IN DB, TRYING BYPASS FOR:', email);
             if (email === 'admin@portalcsr.id' || email === 'admin@pemda.go.id') {
-                console.log('BYPASS SUCCESS FOR:', email);
                 return res.json({
                     token: 'dummy-jwt-token-admin',
                     user: { id: '1', name: 'Admin Utama', email: email, role: 'Super Admin' }
                 });
             }
-            console.log('LOGIN FAILED: NO BYPASS MATCH FOR:', email);
             return res.status(401).json({ error: 'Email atau password salah.' });
         }
 
         const user = users[0];
-        // Updating lastLogin
         await pool.query('UPDATE pengguna SET lastLogin = ? WHERE id = ?', [new Date().toISOString(), user.id]);
 
         res.json({
@@ -162,7 +161,7 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('API ERROR:', err);
+        console.error('LOGIN ERROR:', err);
         res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
     }
 });
