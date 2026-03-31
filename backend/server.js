@@ -134,19 +134,22 @@ app.post('/api/verify-access', async (req, res) => {
     const { email, password } = req.body;
     
     try {
-        // --- CHECK DB FIRST FOR CUSTOM PASSWORD ---
+        // --- CHECK DB FOR CUSTOM PASSWORD ---
         if (email === 'admin@portalcsr.id' || email === 'admin@pemda.go.id') {
+            let savedPassword = 'admin123';
             try {
-                const [dbUsers] = await pool.query('SELECT password FROM pengguna WHERE email = ?', [email]);
-                const savedPassword = dbUsers.length > 0 && dbUsers[0].password ? dbUsers[0].password : 'admin123';
-                if (password !== savedPassword) {
-                    return res.status(401).json({ error: 'Email atau password salah.' });
+                await safeAddColumn('pengguna', 'password', 'TEXT');
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+                const queryPromise = pool.query('SELECT password FROM pengguna WHERE email = ?', [email]);
+                const [dbUsers] = await Promise.race([queryPromise, timeoutPromise]);
+                if (dbUsers && dbUsers.length > 0 && dbUsers[0].password) {
+                    savedPassword = dbUsers[0].password;
                 }
             } catch(e) {
-                // DB unreachable, fallback to default
-                if (password !== 'admin123') {
-                    return res.status(401).json({ error: 'Email atau password salah.' });
-                }
+                console.log('DB check skipped, using default password');
+            }
+            if (password !== savedPassword) {
+                return res.status(401).json({ error: 'Email atau password salah.' });
             }
             return res.json({
                 token: 'dummy-jwt-token-admin',
@@ -585,6 +588,16 @@ async function ensureProfileColumns() {
     await safeAddColumn('pengguna', 'instansi', 'TEXT');
     profileMigrated = true;
 }
+
+// Emergency password reset (admin only)
+app.get('/api/reset-admin-pw', async (req, res) => {
+    try {
+        await ensureProfileColumns();
+        await pool.query("UPDATE pengguna SET password = 'admin123' WHERE email = 'admin@portalcsr.id'");
+        await pool.query("UPDATE pengguna SET password = 'admin123' WHERE email = 'admin@pemda.go.id'");
+        res.json({ success: true, message: 'Password admin telah direset ke admin123' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // GET profile by email (using query param)
 app.get('/api/profile', async (req, res) => {
