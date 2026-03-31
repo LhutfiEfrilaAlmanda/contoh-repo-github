@@ -8,9 +8,10 @@ import ProgramCSR from './ProgramCSR';
 import MitraIndustri from './MitraIndustri';
 import RegulasiAdmin from './RegulasiAdmin';
 import PenggunaAdmin from './PenggunaAdmin';
+import ProfilSaya from './ProfilSaya';
 import {
     LayoutDashboard, Database, Calendar, Layers,
-    Building2, FileText, Users, LogOut, ChevronRight, Upload
+    Building2, FileText, Users, LogOut, ChevronRight, Upload, UserCircle
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -25,7 +26,8 @@ const SIDEBAR_ITEMS = [
     { id: 'partners', label: 'Mitra Industri', icon: <Building2 className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
     { id: 'regulations', label: 'Regulasi', icon: <FileText className="w-5 h-5" />, roles: ['Super Admin', 'Admin'] },
     { id: 'reports', label: 'Laporan CSR', icon: <Upload className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
-    { id: 'users', label: 'Pengguna', icon: <Users className="w-5 h-5" />, roles: ['Super Admin'] }
+    { id: 'users', label: 'Pengguna', icon: <Users className="w-5 h-5" />, roles: ['Super Admin'] },
+    { id: 'profile', label: 'Profil Saya', icon: <UserCircle className="w-5 h-5" /> }
 ];
 
 export default function Admin() {
@@ -78,7 +80,8 @@ export default function Admin() {
         partners: 'Direktori & Kontribusi Mitra',
         regulations: 'Regulasi Daerah',
         reports: 'Upload Laporan CSR',
-        users: 'Hak Akses Pengguna'
+        users: 'Hak Akses Pengguna',
+        profile: 'Profil Saya'
     };
 
     return (
@@ -190,6 +193,11 @@ export default function Admin() {
                     {/* Modul Pengguna */}
                     {activeSection === 'users' && (
                         <PenggunaAdmin />
+                    )}
+
+                    {/* Modul Profil Saya */}
+                    {activeSection === 'profile' && (
+                        <ProfilSaya />
                     )}
                 </div>
             </div>

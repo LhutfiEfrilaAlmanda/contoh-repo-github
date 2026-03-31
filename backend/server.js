@@ -134,8 +134,20 @@ app.post('/api/verify-access', async (req, res) => {
     const { email, password } = req.body;
     
     try {
-        // --- IMMEDIATE BYPASS TO PREVENT DATABASE HANGS ---
+        // --- CHECK DB FIRST FOR CUSTOM PASSWORD ---
         if (email === 'admin@portalcsr.id' || email === 'admin@pemda.go.id') {
+            try {
+                const [dbUsers] = await pool.query('SELECT password FROM pengguna WHERE email = ?', [email]);
+                const savedPassword = dbUsers.length > 0 && dbUsers[0].password ? dbUsers[0].password : 'admin123';
+                if (password !== savedPassword) {
+                    return res.status(401).json({ error: 'Email atau password salah.' });
+                }
+            } catch(e) {
+                // DB unreachable, fallback to default
+                if (password !== 'admin123') {
+                    return res.status(401).json({ error: 'Email atau password salah.' });
+                }
+            }
             return res.json({
                 token: 'dummy-jwt-token-admin',
                 user: { id: '1', name: 'Admin Utama', email: email, role: 'Super Admin' }
@@ -556,6 +568,85 @@ app.put('/api/users/:id', async (req, res) => {
             [name, email, role || 'Viewer', lastLogin || new Date().toISOString(), req.params.id]);
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ========== PROFILE ENDPOINTS ==========
+
+// GET profile by email
+app.get('/api/profile/:email', async (req, res) => {
+    try {
+        // Ensure columns exist (safe migration)
+        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS password TEXT").catch(() => {});
+        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS instansi TEXT").catch(() => {});
+
+        const [users] = await pool.query('SELECT id, name, email, role, instansi, lastLogin FROM pengguna WHERE email = ?', [req.params.email]);
+        if (users.length === 0) {
+            // Return fallback for hardcoded admin
+            if (req.params.email === 'admin@portalcsr.id') {
+                return res.json({ name: 'Admin Utama', email: 'admin@portalcsr.id', role: 'Super Admin', instansi: '' });
+            }
+            return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
+        }
+        res.json(users[0]);
+    } catch (err) { console.error('PROFILE ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+// PUT update profile info
+app.put('/api/profile/:email', async (req, res) => {
+    const { name, instansi } = req.body;
+    try {
+        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS instansi TEXT").catch(() => {});
+        
+        const [users] = await pool.query('SELECT id FROM pengguna WHERE email = ?', [req.params.email]);
+        if (users.length === 0) {
+            // Auto-create record for hardcoded admin
+            if (req.params.email === 'admin@portalcsr.id') {
+                const newId = 'u-admin';
+                await pool.query('INSERT INTO pengguna (id, name, email, role, instansi, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
+                    [newId, name, req.params.email, 'Super Admin', instansi || '', new Date().toISOString()]);
+                return res.json({ success: true });
+            }
+            return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
+        }
+        await pool.query('UPDATE pengguna SET name=?, instansi=? WHERE email=?', [name, instansi || '', req.params.email]);
+        res.json({ success: true });
+    } catch (err) { console.error('PROFILE UPDATE ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+// PUT change password
+app.put('/api/profile/:email/password', async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    try {
+        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS password TEXT").catch(() => {});
+
+        const [users] = await pool.query('SELECT id, password FROM pengguna WHERE email = ?', [req.params.email]);
+        
+        // Handle hardcoded admin that might not exist in DB yet
+        if (users.length === 0 && req.params.email === 'admin@portalcsr.id') {
+            // First time: create the admin row with the new password
+            if (currentPassword !== 'admin123') {
+                return res.status(401).json({ error: 'Kata sandi lama salah.' });
+            }
+            const newId = 'u-admin';
+            await pool.query('INSERT INTO pengguna (id, name, email, role, password, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
+                [newId, 'Admin Utama', req.params.email, 'Super Admin', newPassword, new Date().toISOString()]);
+            return res.json({ success: true });
+        }
+        
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
+        }
+
+        const user = users[0];
+        const storedPassword = user.password || 'admin123'; // Default password
+
+        if (currentPassword !== storedPassword) {
+            return res.status(401).json({ error: 'Kata sandi lama salah.' });
+        }
+
+        await pool.query('UPDATE pengguna SET password=? WHERE email=?', [newPassword, req.params.email]);
+        res.json({ success: true });
+    } catch (err) { console.error('PASSWORD CHANGE ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 
 // Submissions (CREATE)
