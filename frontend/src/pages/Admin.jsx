@@ -19,14 +19,14 @@ import {
 } from 'recharts';
 
 const SIDEBAR_ITEMS = [
-    { id: 'dashboard', label: 'Ringkasan', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
-    { id: 'master', label: 'Data Induk', icon: <Database className="w-5 h-5" />, roles: ['Super Admin', 'Admin'] },
-    { id: 'fiscal', label: 'Tahun Fiskal', icon: <Calendar className="w-5 h-5" />, roles: ['Super Admin', 'Admin'] },
-    { id: 'programs', label: 'Program CSR', icon: <Layers className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
-    { id: 'partners', label: 'Mitra Industri', icon: <Building2 className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
-    { id: 'regulations', label: 'Regulasi', icon: <FileText className="w-5 h-5" />, roles: ['Super Admin', 'Admin'] },
-    { id: 'reports', label: 'Laporan CSR', icon: <Upload className="w-5 h-5" />, roles: ['Super Admin', 'Admin', 'Operator'] },
-    { id: 'users', label: 'Pengguna', icon: <Users className="w-5 h-5" />, roles: ['Super Admin'] },
+    { id: 'dashboard', label: 'Ringkasan', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['Admin', 'Operator'] },
+    { id: 'master', label: 'Data Induk', icon: <Database className="w-5 h-5" />, roles: ['Admin'] },
+    { id: 'fiscal', label: 'Tahun Fiskal', icon: <Calendar className="w-5 h-5" />, roles: ['Admin'] },
+    { id: 'programs', label: 'Program CSR', icon: <Layers className="w-5 h-5" />, roles: ['Admin', 'Operator'] },
+    { id: 'partners', label: 'Mitra Industri', icon: <Building2 className="w-5 h-5" />, roles: ['Admin', 'Operator'] },
+    { id: 'regulations', label: 'Regulasi', icon: <FileText className="w-5 h-5" />, roles: ['Admin'] },
+    { id: 'reports', label: 'Laporan CSR', icon: <Upload className="w-5 h-5" />, roles: ['Admin', 'Operator'] },
+    { id: 'users', label: 'Pengguna', icon: <Users className="w-5 h-5" />, roles: ['Admin'] },
     { id: 'profile', label: 'Profil Saya', icon: <UserCircle className="w-5 h-5" /> }
 ];
 

@@ -153,7 +153,7 @@ app.post('/api/verify-access', async (req, res) => {
             }
             return res.json({
                 token: 'dummy-jwt-token-admin',
-                user: { id: '1', name: 'Admin Utama', email: email, role: 'Super Admin' }
+                user: { id: '1', name: 'Admin Utama', email: email, role: 'Admin' }
             });
         }
         
@@ -189,7 +189,7 @@ app.post('/api/auth/login', async (req, res) => {
             if (email === 'admin@portalcsr.id' || email === 'admin@pemda.go.id') {
                 return res.json({
                     token: 'dummy-jwt-token-admin',
-                    user: { id: '1', name: 'Admin Utama', email: email, role: 'Super Admin' }
+                    user: { id: '1', name: 'Admin Utama', email: email, role: 'Admin' }
                 });
             }
             return res.status(401).json({ error: 'Email atau password salah.' });
@@ -608,7 +608,7 @@ app.get('/api/profile', async (req, res) => {
         const [users] = await pool.query('SELECT id, name, email, role, instansi, lastLogin FROM pengguna WHERE email = ?', [email]);
         if (users.length === 0) {
             if (email === 'admin@portalcsr.id') {
-                return res.json({ name: 'Admin Utama', email: 'admin@portalcsr.id', role: 'Super Admin', instansi: '' });
+                return res.json({ name: 'Admin Utama', email: 'admin@portalcsr.id', role: 'Admin', instansi: '' });
             }
             return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
         }
@@ -627,7 +627,7 @@ app.put('/api/profile', async (req, res) => {
             if (email === 'admin@portalcsr.id') {
                 const newId = 'u-admin';
                 await pool.query('INSERT INTO pengguna (id, name, email, role, instansi, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
-                    [newId, name, email, 'Super Admin', instansi || '', new Date().toISOString()]);
+                    [newId, name, email, 'Admin', instansi || '', new Date().toISOString()]);
                 return res.json({ success: true });
             }
             return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
@@ -651,7 +651,7 @@ app.put('/api/profile/password', async (req, res) => {
             }
             const newId = 'u-admin';
             await pool.query('INSERT INTO pengguna (id, name, email, role, password, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
-                [newId, 'Admin Utama', email, 'Super Admin', newPassword, new Date().toISOString()]);
+                [newId, 'Admin Utama', email, 'Admin', newPassword, new Date().toISOString()]);
             return res.json({ success: true });
         }
         
