@@ -162,6 +162,13 @@ app.post('/api/verify-access', async (req, res) => {
             return res.status(401).json({ error: 'Email atau password salah.' });
         }
         const user = users[0];
+        
+        // VERIFIKASI SANDI UNTUK PENGGUNA UMUM (Operator dsb)
+        const savedPw = user.password || 'admin123';
+        if (password !== savedPw) {
+            return res.status(401).json({ error: 'Email atau password salah.' });
+        }
+        
         await pool.query('UPDATE pengguna SET lastLogin = ? WHERE id = ?', [new Date().toISOString(), user.id]);
         res.json({
             token: `dummy-jwt-token-${user.id}`,
