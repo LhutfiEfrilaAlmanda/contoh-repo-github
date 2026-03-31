@@ -32,7 +32,7 @@ export default function ProfilSaya() {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await api.get(`profile/${user?.email}`);
+                const res = await api.get(`profile?email=${encodeURIComponent(user?.email)}`);
                 if (res.data) {
                     setProfileData({
                         name: res.data.name || user?.name || '',
@@ -58,7 +58,8 @@ export default function ProfilSaya() {
         setSavingProfile(true);
         setProfileMsg({ type: '', text: '' });
         try {
-            await api.put(`profile/${user?.email}`, {
+            await api.put('profile', {
+                email: user?.email,
                 name: profileData.name,
                 instansi: profileData.instansi,
             });
@@ -91,7 +92,8 @@ export default function ProfilSaya() {
         }
 
         try {
-            await api.put(`profile/${user?.email}/password`, {
+            await api.put('profile/password', {
+                email: user?.email,
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword,
             });

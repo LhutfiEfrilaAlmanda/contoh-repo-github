@@ -572,17 +572,29 @@ app.put('/api/users/:id', async (req, res) => {
 
 // ========== PROFILE ENDPOINTS ==========
 
-// GET profile by email
-app.get('/api/profile/:email', async (req, res) => {
-    try {
-        // Ensure columns exist (safe migration)
-        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS password TEXT").catch(() => {});
-        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS instansi TEXT").catch(() => {});
+// Safe column adder (MySQL doesn't support IF NOT EXISTS for columns)
+async function safeAddColumn(table, column, type) {
+    try { await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`); } catch(e) { /* column already exists */ }
+}
 
-        const [users] = await pool.query('SELECT id, name, email, role, instansi, lastLogin FROM pengguna WHERE email = ?', [req.params.email]);
+// Run migrations once on first profile request
+let profileMigrated = false;
+async function ensureProfileColumns() {
+    if (profileMigrated) return;
+    await safeAddColumn('pengguna', 'password', 'TEXT');
+    await safeAddColumn('pengguna', 'instansi', 'TEXT');
+    profileMigrated = true;
+}
+
+// GET profile by email (using query param)
+app.get('/api/profile', async (req, res) => {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'Email parameter required.' });
+    try {
+        await ensureProfileColumns();
+        const [users] = await pool.query('SELECT id, name, email, role, instansi, lastLogin FROM pengguna WHERE email = ?', [email]);
         if (users.length === 0) {
-            // Return fallback for hardcoded admin
-            if (req.params.email === 'admin@portalcsr.id') {
+            if (email === 'admin@portalcsr.id') {
                 return res.json({ name: 'Admin Utama', email: 'admin@portalcsr.id', role: 'Super Admin', instansi: '' });
             }
             return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
@@ -592,44 +604,41 @@ app.get('/api/profile/:email', async (req, res) => {
 });
 
 // PUT update profile info
-app.put('/api/profile/:email', async (req, res) => {
-    const { name, instansi } = req.body;
+app.put('/api/profile', async (req, res) => {
+    const { email, name, instansi } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required.' });
     try {
-        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS instansi TEXT").catch(() => {});
-        
-        const [users] = await pool.query('SELECT id FROM pengguna WHERE email = ?', [req.params.email]);
+        await ensureProfileColumns();
+        const [users] = await pool.query('SELECT id FROM pengguna WHERE email = ?', [email]);
         if (users.length === 0) {
-            // Auto-create record for hardcoded admin
-            if (req.params.email === 'admin@portalcsr.id') {
+            if (email === 'admin@portalcsr.id') {
                 const newId = 'u-admin';
                 await pool.query('INSERT INTO pengguna (id, name, email, role, instansi, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
-                    [newId, name, req.params.email, 'Super Admin', instansi || '', new Date().toISOString()]);
+                    [newId, name, email, 'Super Admin', instansi || '', new Date().toISOString()]);
                 return res.json({ success: true });
             }
             return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
         }
-        await pool.query('UPDATE pengguna SET name=?, instansi=? WHERE email=?', [name, instansi || '', req.params.email]);
+        await pool.query('UPDATE pengguna SET name=?, instansi=? WHERE email=?', [name, instansi || '', email]);
         res.json({ success: true });
     } catch (err) { console.error('PROFILE UPDATE ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 
 // PUT change password
-app.put('/api/profile/:email/password', async (req, res) => {
-    const { currentPassword, newPassword } = req.body;
+app.put('/api/profile/password', async (req, res) => {
+    const { email, currentPassword, newPassword } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required.' });
     try {
-        await pool.query("ALTER TABLE pengguna ADD COLUMN IF NOT EXISTS password TEXT").catch(() => {});
-
-        const [users] = await pool.query('SELECT id, password FROM pengguna WHERE email = ?', [req.params.email]);
+        await ensureProfileColumns();
+        const [users] = await pool.query('SELECT id, password FROM pengguna WHERE email = ?', [email]);
         
-        // Handle hardcoded admin that might not exist in DB yet
-        if (users.length === 0 && req.params.email === 'admin@portalcsr.id') {
-            // First time: create the admin row with the new password
+        if (users.length === 0 && email === 'admin@portalcsr.id') {
             if (currentPassword !== 'admin123') {
                 return res.status(401).json({ error: 'Kata sandi lama salah.' });
             }
             const newId = 'u-admin';
             await pool.query('INSERT INTO pengguna (id, name, email, role, password, lastLogin) VALUES (?, ?, ?, ?, ?, ?)',
-                [newId, 'Admin Utama', req.params.email, 'Super Admin', newPassword, new Date().toISOString()]);
+                [newId, 'Admin Utama', email, 'Super Admin', newPassword, new Date().toISOString()]);
             return res.json({ success: true });
         }
         
@@ -638,13 +647,13 @@ app.put('/api/profile/:email/password', async (req, res) => {
         }
 
         const user = users[0];
-        const storedPassword = user.password || 'admin123'; // Default password
+        const storedPassword = user.password || 'admin123';
 
         if (currentPassword !== storedPassword) {
             return res.status(401).json({ error: 'Kata sandi lama salah.' });
         }
 
-        await pool.query('UPDATE pengguna SET password=? WHERE email=?', [newPassword, req.params.email]);
+        await pool.query('UPDATE pengguna SET password=? WHERE email=?', [newPassword, email]);
         res.json({ success: true });
     } catch (err) { console.error('PASSWORD CHANGE ERROR:', err); res.status(500).json({ error: err.message }); }
 });
