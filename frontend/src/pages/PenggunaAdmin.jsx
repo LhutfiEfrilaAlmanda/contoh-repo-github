@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Users, Shield, Edit, Trash2, Lock } from 'lucide-react';
+import { Users, Shield, Edit, Trash2, Lock, Search } from 'lucide-react';
 
 const ROLES = ['Admin', 'Operator', 'Perusahaan', 'Pemerintah', 'Verifikator', 'User'];
 
@@ -23,6 +23,7 @@ export default function PenggunaAdmin() {
     const [users, setUsers] = useState([]);
     const [editItem, setEditItem] = useState(null);
     const [activeTab, setActiveTab] = useState('pengguna'); // 'pengguna' | 'peran'
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         api.get('users').then(r => setUsers(r.data || []))
@@ -80,6 +81,20 @@ export default function PenggunaAdmin() {
             {/* TAB CONTENT: PENGGUNA */}
             {activeTab === 'pengguna' && (
                 <div>
+                    {/* SEARCH BAR */}
+                    <div className="mb-6 relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Cari berdasarkan nama, email, peran, atau instansi..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                        />
+                    </div>
+
                     {editItem && (
                         <form onSubmit={handleSubmit}
                             className="p-6 rounded-3xl mb-8 border-2 bg-indigo-50/50 border-indigo-200 shadow-sm">
@@ -116,7 +131,12 @@ export default function PenggunaAdmin() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {users.map((u, idx) => (
+                                    {users.filter(u => 
+                                        u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        u.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        u.instansi?.toLowerCase().includes(searchQuery.toLowerCase())
+                                    ).map((u, idx) => (
                                         <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="py-4 px-6 font-bold text-sm text-slate-800">
                                                 <div className="flex items-center gap-3">
