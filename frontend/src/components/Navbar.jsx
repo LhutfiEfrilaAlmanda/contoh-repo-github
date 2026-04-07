@@ -41,7 +41,11 @@ const Navbar = () => {
 
                 <div className="flex items-center gap-4">
                     {isAuthenticated ? (
-                        <button onClick={handleLogout} className="text-sm font-black text-rose-600 px-4 py-2 hover:bg-rose-50 rounded-xl">Logout</button>
+                        !loc.pathname.startsWith('/admin') && (
+                            <button onClick={handleLogout} className="text-sm font-black text-rose-600 px-4 py-2 hover:bg-rose-50 rounded-xl transition-all">
+                                Logout
+                            </button>
+                        )
                     ) : (
                         <Link to="/login" className="hidden sm:block text-sm font-black text-slate-900 px-4 py-2 hover:bg-slate-50 rounded-xl">Login</Link>
                     )}

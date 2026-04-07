@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogIn, KeyRound, Mail, AlertCircle } from 'lucide-react';
+import { LogIn, KeyRound, User, AlertCircle } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -46,18 +46,18 @@ const Login = () => {
 
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Email Instansi</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Username</label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                        <Mail className="h-5 w-5 text-slate-400" />
+                                        <User className="h-5 w-5 text-slate-400" />
                                     </div>
                                     <input
-                                        type="email"
+                                        type="text"
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
-                                        placeholder="admin@pemda.go.id"
+                                        placeholder="admin / operator"
                                     />
                                 </div>
                             </div>

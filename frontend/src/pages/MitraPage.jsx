@@ -8,6 +8,10 @@ const MitraPage = () => {
     const [submissions, setSubmissions] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    // States for Kontribusi Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState('Semua');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -52,6 +56,22 @@ const MitraPage = () => {
             day: 'numeric', month: 'long', year: 'numeric'
         });
     };
+
+    const filteredSubmissions = submissions.filter(sub => {
+        // 1. Search Query
+        const matchSearch = sub.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            getProgramTitle(sub.programId).toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // 2. Status Filter
+        if (filterStatus === 'Semua') return matchSearch;
+        
+        let subStatus = 'Pending';
+        if (sub.status === 'Approved' || sub.status?.toLowerCase() === 'terealisasi') subStatus = 'Terealisasi';
+        else if (sub.status === 'Pending') subStatus = 'Menunggu Verifikasi';
+        else if (sub.status === 'Rejected' || sub.status?.toLowerCase() === 'ditolak') subStatus = 'Ditolak';
+
+        return matchSearch && subStatus === filterStatus;
+    });
 
     return (
         <div className="bg-slate-50 min-h-[calc(100vh-80px)] font-sans">
@@ -145,6 +165,30 @@ const MitraPage = () => {
                     ) : (
                         /* TAB: KONTRIBUSI MITRA */
                         <div className="bg-white rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/40 p-1 md:p-8 animate-fade-in overflow-hidden">
+                            
+                            {/* Search and Filters */}
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 px-4 md:px-0 mt-4 md:mt-0">
+                                <input 
+                                    type="text" 
+                                    placeholder="Cari nama mitra atau program..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full md:w-96 px-5 py-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 text-sm font-medium transition-all placeholder:text-slate-400 text-slate-800"
+                                />
+                                <div className="w-full md:w-auto flex items-center gap-3">
+                                    <select 
+                                        value={filterStatus}
+                                        onChange={(e) => setFilterStatus(e.target.value)}
+                                        className="w-full md:w-auto px-5 py-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 text-sm font-bold text-slate-700 transition-all cursor-pointer"
+                                    >
+                                        <option value="Semua">Semua Status</option>
+                                        <option value="Terealisasi">Terealisasi</option>
+                                        <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+                                        <option value="Ditolak">Ditolak</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div className="overflow-x-auto p-4 md:p-0">
                                 <table className="w-full text-left min-w-[700px]">
                                     <thead>
@@ -156,7 +200,7 @@ const MitraPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {submissions.length > 0 ? submissions.map((sub, i) => (
+                                        {filteredSubmissions.length > 0 ? filteredSubmissions.map((sub, i) => (
                                             <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors group">
                                                 <td className="py-6 px-4">
                                                     <div className="text-base font-bold text-slate-800 mb-0.5 leading-tight group-hover:text-indigo-600 transition-colors">{sub.companyName}</div>
@@ -175,6 +219,10 @@ const MitraPage = () => {
                                                     ) : sub.status === 'Pending' ? (
                                                         <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                                                             MENUNGGU VERIFIKASI
+                                                        </span>
+                                                    ) : sub.status === 'Rejected' || sub.status?.toLowerCase() === 'ditolak' ? (
+                                                        <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                                                            DITOLAK
                                                         </span>
                                                     ) : (
                                                         <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">

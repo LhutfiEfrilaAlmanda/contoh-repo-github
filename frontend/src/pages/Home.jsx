@@ -182,7 +182,7 @@ const Home = () => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatMessages, setChatMessages] = useState(() => {
         const saved = sessionStorage.getItem('csr_chat_history');
-        return saved ? JSON.parse(saved) : [{ role: 'bot', content: 'Halo! Saya Konsultan CSR Senior. Deskripsikan visi sosial perusahaan Anda, dan saya akan merekomendasikan program pemberdayaan yang paling berdampak.' }];
+        return saved ? JSON.parse(saved) : [{ role: 'bot', content: 'Selamat datang. Saya adalah Konsultan CSR Senior Anda. Saya siap membantu merumuskan strategi kontribusi sosial perusahaan Anda melalui program-program prioritas yang tepat sasaran. Silakan deskripsikan pilar atau sektor (Pendidikan, Kesehatan, Ekonomi, Lingkungan) yang ingin Anda dukung hari ini.' }];
     });
     const [userInput, setUserInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -195,6 +195,14 @@ const Home = () => {
     useEffect(() => {
         if (lastProgramId) sessionStorage.setItem('csr_last_program_id', lastProgramId);
     }, [lastProgramId]);
+
+    // Auto-scroll to bottom of chat
+    const chatEndRef = React.useRef(null);
+    useEffect(() => {
+        if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [chatMessages, isTyping]);
 
     const handleSendMessage = async (e) => {
         if (e) e.preventDefault();
@@ -323,9 +331,13 @@ const Home = () => {
                 ) : (
                     <div className="bg-white w-[350px] md:w-[400px] h-[500px] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-zoom-in">
                         {/* Chat Header */}
-                        <div className="bg-indigo-600 p-5 text-white flex justify-between items-center">
+                        <div className="bg-indigo-600 p-5 text-white flex justify-between items-center shadow-lg relative z-10 transition-all">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">👤</div>
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
                                 <div>
                                     <div className="font-bold text-sm">Konsultan CSR Senior</div>
                                     <div className="text-[10px] opacity-70">Sistem Rekomendasi Pintar</div>
@@ -352,13 +364,14 @@ const Home = () => {
                             ))}
                             {isTyping && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1">
+                                    <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1 shadow-sm">
                                         <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
                                         <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                                         <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                                     </div>
                                 </div>
                             )}
+                            <div ref={chatEndRef} />
                         </div>
 
                         {/* Chat Footer */}

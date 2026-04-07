@@ -3,7 +3,6 @@ require('dotenv').config();
 
 // =============================================
 // KONFIGURASI KONEKSI MYSQL
-// Gunakan environment variables untuk production
 // =============================================
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -133,6 +132,43 @@ async function initDB() {
                 logo TEXT
             )`);
 
+            // PERAN_SISTEM
+            await conn.query(`CREATE TABLE IF NOT EXISTS peran_sistem (
+                id VARCHAR(191) PRIMARY KEY,
+                role_name TEXT,
+                description TEXT,
+                columns_config TEXT,
+                menus TEXT,
+                color TEXT
+            )`);
+            try { await conn.query('ALTER TABLE peran_sistem ADD COLUMN columns_config TEXT'); } catch (e) {}
+
+            // SDGS_TUJUAN
+            await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_tujuan (
+                id VARCHAR(191) PRIMARY KEY,
+                no_get INT,
+                judul TEXT,
+                keterangan TEXT,
+                warna TEXT,
+                gambar TEXT
+            )`);
+            try { await conn.query('ALTER TABLE sdgs_tujuan ADD COLUMN gambar TEXT'); } catch(e) {}
+
+            // SDGS_PILAR
+            await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_pilar (
+                id VARCHAR(191) PRIMARY KEY,
+                kode_pilar TEXT,
+                nama_pilar TEXT,
+                keterangan TEXT
+            )`);
+
+            // SDGS_PILAR_MAPPING
+            await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_pilar_mapping (
+                id VARCHAR(191) PRIMARY KEY,
+                pilar_id VARCHAR(191),
+                sdg_id VARCHAR(191)
+            )`);
+
             // --- SEED SECTIONS ---
             const [regRows] = await conn.query('SELECT COUNT(*) as count FROM regulasi');
             if (regRows[0].count === 0) {
@@ -164,10 +200,64 @@ async function initDB() {
                 }
             }
 
-            await conn.query(
-                `INSERT IGNORE INTO profil_organisasi (id, name, vision, mission, address, email, phone, website, licenseKey, logo) 
-                 VALUES ('1', 'PT Tomo Teknologi Sinergi', 'Mewujudkan pembangunan daerah yang berkelanjutan melalui sinergi kemitraan strategis.', 'Memfasilitasi kolaborasi antara pemerintah dan sektor swasta secara transparan dan akuntabel.', 'Gedung Sate, Bandung', 'csr@pemda.go.id', '022-1234567', 'www.csr-pemda.go.id', 'MISC-7721-BNDG-2024', '')`
-            );
+            await conn.query(`INSERT IGNORE INTO profil_organisasi (id, name, vision, mission, address, email, phone, website, licenseKey, logo) VALUES ('1', 'PT Tomo Teknologi Sinergi', 'Mewujudkan pembangunan daerah yang berkelanjutan melalui sinergi kemitraan strategis.', 'Memfasilitasi kolaborasi antara pemerintah dan sektor swasta secara transparan dan akuntabel.', 'Gedung Sate, Bandung', 'csr@pemda.go.id', '022-1234567', 'www.csr-pemda.go.id', 'MISC-7721-BNDG-2024', '')`);
+
+            const [roleRows] = await conn.query('SELECT COUNT(*) as count FROM peran_sistem');
+            if (roleRows[0].count === 0) {
+                const initRoles = [
+                    ['r-1', 'Administrator', 'Memiliki kendali penuh terhadap seluruh modul sistem dan pengaturan.', '[]', JSON.stringify(['Ringkasan', 'Data Induk', 'SDGs', 'Pilar', 'Tahun Fiskal', 'Program CSR', 'Mitra Industri', 'Regulasi', 'Laporan CSR', 'Pengguna', 'Profil Saya']), 'rose'],
+                    ['r-2', 'Operator', 'Bertugas memasukkan data operasional program, mitra, dan mengelola laporan.', '[]', JSON.stringify(['Ringkasan', 'Program CSR', 'Mitra Industri', 'Laporan CSR', 'Profil Saya']), 'indigo'],
+                    ['r-3', 'Verifikator', 'Bertugas melakukan verifikasi laporan dan persetujuan kontribusi.', '[]', JSON.stringify(['Ringkasan', 'Laporan CSR', 'Mitra Industri', 'Profil Saya']), 'emerald']
+                ];
+                for (const rol of initRoles) { await conn.query('INSERT IGNORE INTO peran_sistem (id, role_name, description, columns_config, menus, color) VALUES (?, ?, ?, ?, ?, ?)', rol); }
+            }
+
+            const [sdgRows] = await conn.query('SELECT COUNT(*) as count FROM sdgs_tujuan');
+            if (sdgRows[0].count === 0) {
+                const sdgs = [
+                    ['sdg-1', 1, 'Tanpa Kemiskinan', 'Mengakhiri kemiskinan dalam segala bentuk di mana pun.', '#e5243b'],
+                    ['sdg-2', 2, 'Tanpa Kelaparan', 'Mengakhiri kelaparan, mencapai ketahanan pangan, memperbaiki nutrisi, dan menggalakkan pertanian berkelanjutan.', '#dda63a'],
+                    ['sdg-3', 3, 'Kehidupan Sehat dan Sejahtera', 'Menjamin kehidupan yang sehat dan meningkatkan kesejahteraan seluruh penduduk untuk semua usia.', '#4c9f38'],
+                    ['sdg-4', 4, 'Pendidikan Berkualitas', 'Menjamin kualitas pendidikan yang inklusif dan merata serta meningkatkan kesempatan belajar sepanjang hayat untuk semua.', '#c5192d'],
+                    ['sdg-5', 5, 'Kesetaraan Gender', 'Mencapai kesetaraan gender dan memberdayakan kaum perempuan.', '#ff3a21'],
+                    ['sdg-6', 6, 'Air Bersih dan Sanitasi Layak', 'Menjamin ketersediaan serta pengelolaan air bersih dan sanitasi yang berkelanjutan untuk semua.', '#26bde2'],
+                    ['sdg-7', 7, 'Energi Bersih dan Terjangkau', 'Menjamin akses terhadap energi yang terjangkau, andal, berkelanjutan, dan modern untuk semua.', '#fcc30b'],
+                    ['sdg-8', 8, 'Pekerjaan Layak dan Pertumbuhan Ekonomi', 'Meningkatkan pertumbuhan ekonomi yang inklusif dan berkelanjutan, kesempatan kerja yang produktif dan menyeluruh, serta pekerjaan yang layak untuk semua.', '#a21942'],
+                    ['sdg-9', 9, 'Industri, Inovasi, dan Infrastruktur', 'Membangun infrastruktur yang tangguh, meningkatkan industrialisasi inklusif dan berkelanjutan, serta mendorong inovasi.', '#fd6925'],
+                    ['sdg-10', 10, 'Berkurangnya Kesenjangan', 'Mengurangi kesenjangan di dalam dan antarnegara.', '#dd1367'],
+                    ['sdg-11', 11, 'Kota dan Komunitas Berkelanjutan', 'Menjadikan kota dan pemukiman inklusif, aman, tangguh, dan berkelanjutan.', '#fd9d24'],
+                    ['sdg-12', 12, 'Konsumsi dan Produksi yang Bertanggung Jawab', 'Menjamin pola produksi dan konsumsi yang berkelanjutan.', '#bf8b2e'],
+                    ['sdg-13', 13, 'Penanganan Perubahan Iklim', 'Mengambil tindakan cepat untuk mengatasi perubahan iklim dan dampaknya.', '#3f7e44'],
+                    ['sdg-14', 14, 'Ekosistem Laut', 'Melestarikan dan memanfaatkan secara berkelanjutan sumber daya laut, samudra, dan ekosistem maritim.', '#0a97d9'],
+                    ['sdg-15', 15, 'Ekosistem Daratan', 'Melindungi, merestorasi, dan meningkatkan pemanfaatan berkelanjutan ekosistem daratan, mengelola hutan secara berkelanjutan, menghentikan penggurunan, memulihkan degradasi lahan, serta menghentikan kehilangan keanekaragaman hayati.', '#56c02b'],
+                    ['sdg-16', 16, 'Perdamaian, Keadilan, dan Kelembagaan yang Tangguh', 'Menguatkan masyarakat yang inklusif dan damai untuk pembangunan berkelanjutan, menyediakan akses keadilan untuk semua, dan membangun lembaga yang efektif, akuntabel, dan inklusif di semua tingkatan.', '#00689d'],
+                    ['sdg-17', 17, 'Kemitraan untuk Mencapai Tujuan', 'Memperkuat sarana implementasi dan merevitalisasi kemitraan global untuk pembangunan berkelanjutan.', '#19486a']
+                ];
+                for (const s of sdgs) { await conn.query('INSERT IGNORE INTO sdgs_tujuan (id, no_get, judul, keterangan, warna) VALUES (?, ?, ?, ?, ?)', s); }
+            }
+
+            const [pilarRows] = await conn.query('SELECT COUNT(*) as count FROM sdgs_pilar');
+            if (pilarRows[0].count === 0) {
+                const initPillars = [
+                    ['pil-1', 'P1', 'Ekonomi', 'Pilar pembangunan ekonomi untuk pertumbuhan berkelanjutan.'],
+                    ['pil-2', 'P2', 'Kesehatan', 'Pilar pembangunan kesehatan dan kesejahteraan masyarakat.'],
+                    ['pil-3', 'P3', 'Pendidikan', 'Pilar peningkatan kualitas sumber daya manusia melalui pendidikan.'],
+                    ['pil-4', 'P4', 'Lingkungan', 'Pilar pelestarian lingkungan hidup dan perubahan iklim.']
+                ];
+                for (const p of initPillars) { await conn.query('INSERT IGNORE INTO sdgs_pilar (id, kode_pilar, nama_pilar, keterangan) VALUES (?, ?, ?, ?)', p); }
+                
+                const mapping = [
+                    // P2 Kesehatan -> 2, 3, 6
+                    ['map-1', 'pil-2', 'sdg-2'], ['map-2', 'pil-2', 'sdg-3'], ['map-3', 'pil-2', 'sdg-6'],
+                    // P3 Pendidikan -> 4, 8, 10, 17
+                    ['map-4', 'pil-3', 'sdg-4'], ['map-5', 'pil-3', 'sdg-8'], ['map-6', 'pil-3', 'sdg-10'], ['map-7', 'pil-3', 'sdg-17'],
+                    // P4 Lingkungan -> 8, 12, 13
+                    ['map-8', 'pil-4', 'sdg-8'], ['map-9', 'pil-4', 'sdg-12'], ['map-10', 'pil-4', 'sdg-13'],
+                    // P1 Ekonomi -> 7, 9, 11
+                    ['map-11', 'pil-1', 'sdg-7'], ['map-12', 'pil-1', 'sdg-9'], ['map-13', 'pil-1', 'sdg-11']
+                ];
+                for (const m of mapping) { await conn.query('INSERT IGNORE INTO sdgs_pilar_mapping (id, pilar_id, sdg_id) VALUES (?, ?, ?)', m); }
+            }
 
             conn.release();
             console.log('Inisialisasi database dan seed selesai.');

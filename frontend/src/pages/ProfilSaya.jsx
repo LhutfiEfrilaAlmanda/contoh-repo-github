@@ -10,6 +10,7 @@ export default function ProfilSaya() {
     const [profileData, setProfileData] = useState({
         name: user?.name || '',
         email: user?.email || '',
+        emailDinas: '',
         instansi: '',
     });
     const [profileMsg, setProfileMsg] = useState({ type: '', text: '' });
@@ -37,6 +38,7 @@ export default function ProfilSaya() {
                     setProfileData({
                         name: res.data.name || user?.name || '',
                         email: res.data.email || user?.email || '',
+                        emailDinas: res.data.emailDinas || '',
                         instansi: res.data.instansi || '',
                     });
                 }
@@ -45,6 +47,7 @@ export default function ProfilSaya() {
                 setProfileData({
                     name: user?.name || '',
                     email: user?.email || '',
+                    emailDinas: '',
                     instansi: '',
                 });
             }
@@ -62,6 +65,7 @@ export default function ProfilSaya() {
                 email: user?.email,
                 name: profileData.name,
                 instansi: profileData.instansi,
+                emailDinas: profileData.emailDinas,
             });
             // Update local storage user data
             const updatedUser = { ...user, name: profileData.name };
@@ -142,9 +146,16 @@ export default function ProfilSaya() {
                                 </div>
                             )}
                             <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1">Email</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1">Email Dinas</p>
                                 <div className="flex items-center gap-2 text-sm text-slate-700">
                                     <Mail className="w-4 h-4 text-slate-400" />
+                                    {profileData.emailDinas || <span className="text-slate-400 italic">Belum diisi</span>}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1">Username</p>
+                                <div className="flex items-center gap-2 text-sm text-slate-700">
+                                    <User className="w-4 h-4 text-slate-400" />
                                     {profileData.email}
                                 </div>
                             </div>
@@ -222,9 +233,10 @@ export default function ProfilSaya() {
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                                             <input
                                                 type="email"
-                                                value={profileData.email}
-                                                disabled
-                                                className="w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-400 bg-slate-50 cursor-not-allowed outline-none"
+                                                value={profileData.emailDinas}
+                                                onChange={(e) => setProfileData({ ...profileData, emailDinas: e.target.value })}
+                                                className="w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all outline-none"
+                                                placeholder="email.dinas@instansi.go.id"
                                             />
                                         </div>
                                     </div>

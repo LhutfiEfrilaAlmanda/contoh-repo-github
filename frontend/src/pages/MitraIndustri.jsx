@@ -10,6 +10,10 @@ export default function MitraIndustri() {
     const [programs, setPrograms] = useState([]);
     const [editItem, setEditItem] = useState(null);
 
+    // States for filtering Verifikasi Kontribusi
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('Semua');
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -84,6 +88,22 @@ export default function MitraIndustri() {
         const match = programs.find(p => p.id === progId);
         return match ? match.title : 'Program ' + progId;
     };
+
+    const filteredSubmissions = submissions.filter(sub => {
+        // 1. Search Logic (Company name or Program title)
+        const matchSearch = sub.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            getProgramTitle(sub.programId).toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // 2. Status Filter Logic
+        if (statusFilter === 'Semua') return matchSearch;
+        
+        let currentStatus = 'Pending';
+        if (sub.status?.toLowerCase() === 'terealisasi' || sub.status === 'Approved') currentStatus = 'Terealisasi';
+        else if (sub.status?.toLowerCase() === 'ditolak' || sub.status === 'Rejected') currentStatus = 'Ditolak';
+        else currentStatus = 'Menunggu Verifikasi';
+
+        return matchSearch && currentStatus === statusFilter;
+    });
 
     return (
         <div className="animate-fade-in">
@@ -164,6 +184,32 @@ export default function MitraIndustri() {
                 </>
             ) : (
                 <>
+                    {/* Filter & Search Bar for Verifikasi Kontribusi */}
+                    <div className="flex flex-col md:flex-row gap-4 mb-6">
+                        <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span className="text-slate-400">🔍</span>
+                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="Cari nama mitra atau program..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
+                            />
+                        </div>
+                        <select 
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm min-w-[200px]"
+                        >
+                            <option value="Semua">Semua Status</option>
+                            <option value="Terealisasi">Terealisasi</option>
+                            <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+                            <option value="Ditolak">Ditolak</option>
+                        </select>
+                    </div>
+
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-8">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left min-w-[800px]">
@@ -176,7 +222,7 @@ export default function MitraIndustri() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {submissions.length > 0 ? submissions.map(sub => {
+                                    {filteredSubmissions.length > 0 ? filteredSubmissions.map(sub => {
                                         const isRealised = sub.status?.toLowerCase() === 'terealisasi' || sub.status === 'Approved';
                                         const isRejected = sub.status?.toLowerCase() === 'ditolak' || sub.status === 'Rejected';
                                         const isPending = !isRealised && !isRejected;
