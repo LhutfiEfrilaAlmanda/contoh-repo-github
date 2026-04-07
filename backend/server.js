@@ -97,7 +97,7 @@ const getHandler = (tableName, mapFunc) => async (req, res) => {
     try {
         let orderBy = '';
         if (['kelompok_program', 'sektor_industri', 'wilayah_kerja'].includes(tableName)) {
-            orderBy = ' ORDER BY id ASC';
+            orderBy = ' ORDER BY name ASC';
         } else if (['kelola_program', 'direktori_mitra_csr', 'regulasi', 'pengguna', 'kontribusi_mitra_csr'].includes(tableName)) {
             orderBy = ' ORDER BY LENGTH(id), id ASC';
         }
