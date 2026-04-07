@@ -169,6 +169,15 @@ async function initDB() {
                 sdg_id VARCHAR(191)
             )`);
 
+            // NOTIFIKASI (BARU)
+            await conn.query(`CREATE TABLE IF NOT EXISTS notifikasi (
+                id VARCHAR(191) PRIMARY KEY,
+                message TEXT,
+                type VARCHAR(50),
+                is_read TINYINT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )`);
+
             // --- SEED SECTIONS ---
             const [regRows] = await conn.query('SELECT COUNT(*) as count FROM regulasi');
             if (regRows[0].count === 0) {

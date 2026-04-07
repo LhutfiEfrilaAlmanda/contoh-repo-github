@@ -111,11 +111,30 @@ const getHandler = (tableName, mapFunc) => async (req, res) => {
 // DELETE by id
 const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
     try {
+        // Log notification before delete for context
+        if (['kelola_program', 'direktori_mitra_csr', 'regulasi'].includes(tableName)) {
+            const [rows] = await pool.query(`SELECT * FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
+            if (rows.length > 0) {
+                const name = rows[0].title || rows[0].companyName || rows[0].name || req.params.id;
+                const labels = { kelola_program: 'Program', direktori_mitra_csr: 'Mitra', regulasi: 'Regulasi' };
+                await createNotification(`${labels[tableName]} "${name}" telah dihapus.`, 'warning');
+            }
+        }
+        
         const [result] = await pool.query(`DELETE FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
         res.json({ success: true, changes: result.affectedRows });
     } catch (err) {
         console.error('API ERROR:', err); res.status(500).json({ error: err.message });
     }
+};
+
+// NOTIFICATION HELPER (BARU)
+const createNotification = async (message, type = 'info') => {
+    try {
+        const id = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        await pool.query('INSERT INTO notifikasi (id, message, type) VALUES (?, ?, ?)', [id, message, type]);
+        console.log('[NOTIF]', message);
+    } catch (err) { console.error('Failed to create notification:', err); }
 };
 
 /* ================================
@@ -277,6 +296,12 @@ app.get('/api/categories', getHandler('kelompok_program', r => r.name));
 app.get('/api/sectors', getHandler('sektor_industri'));
 app.get('/api/locations', getHandler('wilayah_kerja'));
 app.get('/api/fiscal-years', getHandler('tahun_fiskal'));
+app.get('/api/notifications', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM notifikasi ORDER BY created_at DESC LIMIT 50');
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ========== SDGs & PILLARS CRUD ==========
 app.get('/api/sdgs', async (req, res) => {
@@ -580,6 +605,7 @@ app.delete('/api/pillars/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM sdgs_pilar_mapping WHERE pilar_id = ?', [req.params.id]);
         await pool.query('DELETE FROM sdgs_pilar WHERE id = ?', [req.params.id]);
+        await createNotification(`Pilar SDGs ID ${req.params.id} telah dihapus.`, 'warning');
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -605,6 +631,7 @@ app.post('/api/programs', async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, title, description || '', category, budget, year, location || '', beneficiaries || '', image || '', impactScore || 0, stringTags]
         );
+        await createNotification(`Program baru ditambahkan: ${title}`, 'success');
         res.json({ success: true, id: newId, title, description, category, budget, year, location, beneficiaries, image, impactScore, tags: stringTags });
     } catch (err) {
         console.error('API ERROR:', err); res.status(500).json({ error: err.message });
@@ -620,6 +647,7 @@ app.put('/api/programs/:id', async (req, res) => {
             `UPDATE kelola_program SET title=?, description=?, category=?, budget=?, year=?, location=?, beneficiaries=?, image=?, impactScore=?, tags=? WHERE id=?`,
             [title, description || '', category, budget, year, location || '', beneficiaries || '', image || '', impactScore || 0, stringTags, req.params.id]
         );
+        await createNotification(`Program "${title}" telah diperbarui.`, 'info');
         res.json({ success: true });
     } catch (err) {
         console.error('API ERROR:', err); res.status(500).json({ error: err.message });
@@ -646,6 +674,7 @@ app.put('/api/partners/:id', async (req, res) => {
     try {
         await pool.query(`UPDATE direktori_mitra_csr SET companyName=?, logo=?, sector=?, address=?, phone=?, contributionCount=?, joinedYear=? WHERE id=?`,
             [companyName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear(), req.params.id]);
+        await createNotification(`Data mitra "${companyName}" telah diubah.`, 'info');
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -701,6 +730,7 @@ app.post('/api/regulations', uploadReg.single('file'), async (req, res) => {
         const newId = `reg-${nextNum}`;
         await pool.query(`INSERT INTO regulasi (id, title, number, year, type, description, fileSize, fileUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, title, number || '', year || new Date().getFullYear(), type || '', description || '', fileSize, fileUrl]);
+        await createNotification(`Regulasi baru ditambahkan: ${title}`, 'success');
         res.json({ success: true, id: newId, title, number, year, type, description, fileSize, fileUrl });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -859,6 +889,7 @@ app.post('/api/submissions', async (req, res) => {
         const newId = `s-${nextNum}`;
         await pool.query(`INSERT INTO kontribusi_mitra_csr (id, companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, companyName, contactPerson || '', email || '', programId || '', status || 'Pending', commitmentAmount || 0, submittedAt || new Date().toISOString()]);
+        await createNotification(`Pengajuan kontribusi baru dari ${companyName} telah diterima.`, 'info');
         res.json({ success: true, id: newId, companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -902,6 +933,7 @@ app.post('/api/reports/upload', uploadReport.single('file'), async (req, res) =>
             url: path_url,
             data: { id: newId, nama_file, ukuran_file, tipe_file }
         });
+        await createNotification(`Laporan CSR baru diunggah: ${nama_file}`, 'success');
     } catch (err) {
         console.error('API ERROR:', err);
         res.status(500).json({ error: err.message });
@@ -913,6 +945,7 @@ app.put('/api/submissions/:id', async (req, res) => {
     console.log(`UPDATING SUBMISSION id=${req.params.id} to status=${status}`);
     try {
         await pool.query(`UPDATE kontribusi_mitra_csr SET status=? WHERE id=?`, [status, req.params.id]);
+        await createNotification(`Status pengajuan ${req.params.id} diubah menjadi: ${status}`, 'info');
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -1058,6 +1091,14 @@ app.delete('/api/roles/:id', async (req, res) => {
 /* ================================
    ERROR HANDLING & FALLBACK
 ================================ */
+
+// Read All Notifs (BARU)
+app.put('/api/notifications/read-all', async (req, res) => {
+    try {
+        await pool.query('UPDATE notifikasi SET is_read = 1');
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // Catch-all 404 for API routes
 app.use('/api', (req, res) => {

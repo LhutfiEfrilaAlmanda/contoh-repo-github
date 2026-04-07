@@ -8,22 +8,32 @@ const Navbar = () => {
     const { isAuthenticated, user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const loc = useLocation();
-    const [notifCount, setNotifCount] = useState(0);
+    const [notifs, setNotifs] = useState([]);
+    const [showNotifMenu, setShowNotifMenu] = useState(false);
+
+    const fetchNotifs = async () => {
+        if (isAuthenticated && user?.role === 'Admin') {
+            try {
+                const res = await api.get('notifications');
+                setNotifs(res.data || []);
+            } catch (e) { console.error('Notif fetch error:', e); }
+        }
+    };
 
     useEffect(() => {
-        if (isAuthenticated && user?.role === 'Admin') {
-            const fetchNotifs = async () => {
-                try {
-                    const res = await api.get('submissions');
-                    const pending = res.data.filter(s => s.status === 'Pending' || s.status === 'Menunggu Verifikasi').length;
-                    setNotifCount(pending);
-                } catch (e) { console.error('Notif fetch error:', e); }
-            };
-            fetchNotifs();
-            const interval = setInterval(fetchNotifs, 30000); // Polling every 30s
-            return () => clearInterval(interval);
-        }
+        fetchNotifs();
+        const interval = setInterval(fetchNotifs, 30000);
+        return () => clearInterval(interval);
     }, [isAuthenticated, user]);
+
+    const unreadCount = notifs.filter(n => !n.is_read).length;
+
+    const handleMarkAllRead = async () => {
+        try {
+            await api.put('notifications/read-all');
+            setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+        } catch (e) { console.error(e); }
+    };
 
     const handleLogout = () => {
         logout();
@@ -59,23 +69,73 @@ const Navbar = () => {
 
                 <div className="flex items-center gap-4">
                     {isAuthenticated && user?.role === 'Admin' && (
-                        <Link to="/mitra" className="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors group">
-                            <Bell className={`w-6 h-6 ${notifCount > 0 ? 'animate-[pulse_2s_infinite]' : ''}`} />
-                            {notifCount > 0 && (
-                                <span className="absolute top-1.5 right-1.5 bg-rose-500 text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                                    {notifCount > 9 ? '9+' : notifCount}
-                                </span>
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowNotifMenu(!showNotifMenu)}
+                                className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative"
+                            >
+                                <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'animate-[pulse_2s_infinite]' : ''}`} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 bg-rose-500 text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {showNotifMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifMenu(false)}></div>
+                                    <div className="absolute top-full right-0 mt-3 w-80 bg-white shadow-2xl rounded-2xl border border-slate-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                                            <h3 className="font-black text-xs uppercase tracking-widest text-slate-800">Notifikasi Pesan</h3>
+                                            {unreadCount > 0 && (
+                                                <button 
+                                                    onClick={handleMarkAllRead}
+                                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
+                                                >
+                                                    Tandai Semua Dibaca
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="max-h-[350px] overflow-y-auto">
+                                            {notifs.length > 0 ? (
+                                                notifs.map(n => (
+                                                    <div 
+                                                        key={n.id} 
+                                                        className={`p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${!n.is_read ? 'bg-indigo-50/30' : ''}`}
+                                                    >
+                                                        <div className="flex gap-3">
+                                                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                                                                n.type === 'success' ? 'bg-emerald-500' : 
+                                                                n.type === 'warning' ? 'bg-rose-500' : 'bg-indigo-500'
+                                                            } ${!n.is_read ? 'opacity-100' : 'opacity-0'}`}></div>
+                                                            <div>
+                                                                <p className="text-[12px] text-slate-700 leading-relaxed font-medium">{n.message}</p>
+                                                                <p className="text-[10px] text-slate-400 mt-1 font-bold italic">
+                                                                    {new Date(n.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="p-8 text-center">
+                                                    <p className="text-slate-400 text-xs font-bold">Tidak ada notifikasi aktivitas.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Link 
+                                            to="/mitra" 
+                                            onClick={() => setShowNotifMenu(false)}
+                                            className="block p-3 text-center bg-slate-50 text-[11px] font-black text-slate-500 hover:text-indigo-600 transition-colors border-t border-slate-100"
+                                        >
+                                            LIHAT SEMUA AKTIVITAS
+                                        </Link>
+                                    </div>
+                                </>
                             )}
-                            
-                            {/* Hover Tooltip */}
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-slate-100 p-3 opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-y-2 group-hover:translate-y-0 z-[60]">
-                                <p className="text-[11px] font-bold text-slate-800">
-                                    {notifCount > 0 
-                                        ? `Ada ${notifCount} pengajuan kontribusi baru yang perlu diverifikasi.` 
-                                        : 'Tidak ada notifikasi baru.'}
-                                </p>
-                            </div>
-                        </Link>
+                        </div>
                     )}
 
                     {isAuthenticated ? (
