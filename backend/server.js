@@ -1121,6 +1121,22 @@ app.delete('/api/roles/:id', async (req, res) => {
    ERROR HANDLING & FALLBACK
 ================================ */
 
+// Clear All Notifs (BARU)
+app.delete('/api/notifications', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM notifikasi');
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Delete Single Notif (BARU)
+app.delete('/api/notifications/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM notifikasi WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Read All Notifs (BARU)
 app.put('/api/notifications/read-all', async (req, res) => {
     try {

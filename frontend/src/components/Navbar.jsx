@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Bell } from 'lucide-react';
+import { Bell, Trash2, X } from 'lucide-react';
 import api from '../services/api';
 
 const Navbar = () => {
@@ -32,6 +32,22 @@ const Navbar = () => {
         try {
             await api.put('notifications/read-all');
             setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+        } catch (e) { console.error(e); }
+    };
+
+    const handleDeleteAll = async () => {
+        if (!window.confirm('Yakin ingin menghapus seluruh riwayat notifikasi?')) return;
+        try {
+            await api.delete('notifications');
+            setNotifs([]);
+        } catch (e) { console.error(e); }
+    };
+
+    const handleDeleteOne = async (e, id) => {
+        e.stopPropagation(); // Prevent dropdown from closing
+        try {
+            await api.delete(`notifications/${id}`);
+            setNotifs(prev => prev.filter(n => n.id !== id));
         } catch (e) { console.error(e); }
     };
 
@@ -88,13 +104,23 @@ const Navbar = () => {
                                     <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifMenu(false)}></div>
                                     <div className="absolute top-full right-0 mt-3 w-80 bg-white shadow-2xl rounded-2xl border border-slate-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
                                         <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                                            <h3 className="font-black text-xs uppercase tracking-widest text-slate-800">Notifikasi Pesan</h3>
+                                            <div>
+                                                <h3 className="font-black text-xs uppercase tracking-widest text-slate-800">Notifikasi Pesan</h3>
+                                                {notifs.length > 0 && (
+                                                    <button 
+                                                        onClick={handleDeleteAll}
+                                                        className="text-[9px] font-black text-rose-500 hover:text-rose-600 mt-1 uppercase tracking-tighter"
+                                                    >
+                                                        Bersihkan Semua
+                                                    </button>
+                                                )}
+                                            </div>
                                             {unreadCount > 0 && (
                                                 <button 
                                                     onClick={handleMarkAllRead}
                                                     className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
                                                 >
-                                                    Tandai Semua Dibaca
+                                                    Tandai Dibaca
                                                 </button>
                                             )}
                                         </div>
@@ -103,9 +129,9 @@ const Navbar = () => {
                                                 notifs.map(n => (
                                                     <div 
                                                         key={n.id} 
-                                                        className={`p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${!n.is_read ? 'bg-indigo-50/30' : ''}`}
+                                                        className={`p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group relative ${!n.is_read ? 'bg-indigo-50/30' : ''}`}
                                                     >
-                                                        <div className="flex gap-3">
+                                                        <div className="flex gap-3 pr-6">
                                                             <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
                                                                 n.type === 'success' ? 'bg-emerald-500' : 
                                                                 n.type === 'warning' ? 'bg-rose-500' : 'bg-indigo-500'
@@ -117,11 +143,22 @@ const Navbar = () => {
                                                                 </p>
                                                             </div>
                                                         </div>
+                                                        
+                                                        <button 
+                                                            onClick={(e) => handleDeleteOne(e, n.id)}
+                                                            className="absolute top-4 right-3 p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
                                                     </div>
                                                 ))
                                             ) : (
                                                 <div className="p-8 text-center">
-                                                    <p className="text-slate-400 text-xs font-bold">Tidak ada notifikasi aktivitas.</p>
+                                                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <Bell className="w-6 h-6 text-slate-200" />
+                                                    </div>
+                                                    <p className="text-slate-400 text-xs font-bold italic">Tidak ada notifikasi aktivitas.</p>
                                                 </div>
                                             )}
                                         </div>
