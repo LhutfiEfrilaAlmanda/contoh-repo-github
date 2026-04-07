@@ -9,6 +9,7 @@ export default function MitraIndustri() {
     const [submissions, setSubmissions] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [editItem, setEditItem] = useState(null);
+    const [showForm, setShowForm] = useState(false);
 
     // States for filtering Verifikasi Kontribusi
     const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +56,9 @@ export default function MitraIndustri() {
                 const r = await api.post('partners', item);
                 setPartners(prev => [...prev, r.data]);
             }
-            setEditItem(null); e.target.reset();
+            setEditItem(null); 
+            setShowForm(false); 
+            e.target.reset();
             alert('Mitra berhasil disimpan!');
         } catch (err) { alert('Gagal menyimpan.'); }
     };
@@ -108,30 +111,42 @@ export default function MitraIndustri() {
     return (
         <div className="animate-fade-in">
             {/* Header Tabs Navigation */}
-            <div className="flex bg-slate-100 p-1 rounded-2xl mb-8 w-fit border border-slate-200">
-                <button
-                    onClick={() => { setActiveTab('direktori'); setEditItem(null); }}
-                    className={`px-6 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 ${activeTab === 'direktori' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
-                >
-                    <Building2 className="w-4 h-4" /> Manajemen Direktori
-                </button>
-                <button
-                    onClick={() => { setActiveTab('kontribusi'); setEditItem(null); }}
-                    className={`px-6 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 ${activeTab === 'kontribusi' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
-                >
-                    <FileCheck className="w-4 h-4" /> Verifikasi Kontribusi
-                    {submissions.filter(s => s.status === 'Pending' || s.status === 'Menunggu Verifikasi').length > 0 && (
-                        <span className="bg-rose-500 text-white rounded-full px-2 py-0.5 text-[10px]">
-                            {submissions.filter(s => s.status === 'Pending' || s.status === 'Menunggu Verifikasi').length}
-                        </span>
-                    )}
-                </button>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex bg-slate-100 p-1 rounded-2xl w-fit border border-slate-200">
+                    <button
+                        onClick={() => { setActiveTab('direktori'); setEditItem(null); setShowForm(false); }}
+                        className={`px-6 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 ${activeTab === 'direktori' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
+                    >
+                        <Building2 className="w-4 h-4" /> Manajemen Direktori
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('kontribusi'); setEditItem(null); setShowForm(false); }}
+                        className={`px-6 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 ${activeTab === 'kontribusi' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:bg-white/50'}`}
+                    >
+                        <FileCheck className="w-4 h-4" /> Verifikasi Kontribusi
+                        {submissions.filter(s => s.status === 'Pending' || s.status === 'Menunggu Verifikasi').length > 0 && (
+                            <span className="bg-rose-500 text-white rounded-full px-2 py-0.5 text-[10px]">
+                                {submissions.filter(s => s.status === 'Pending' || s.status === 'Menunggu Verifikasi').length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {activeTab === 'direktori' && (
+                    <button 
+                        onClick={() => setShowForm(!showForm)}
+                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-sm ${showForm ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                    >
+                        {showForm ? '✕ Tutup Form' : '+ Tambah Mitra BARU'}
+                    </button>
+                )}
             </div>
 
             {activeTab === 'direktori' ? (
                 <>
-                    <form key={editItem?.id || 'new'} onSubmit={handleMitraSubmit}
-                        className={`p-6 rounded-3xl mb-8 border-2 ${editItem ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50 border-slate-100'}`}>
+                    {showForm && (
+                        <form key={editItem?.id || 'new'} onSubmit={handleMitraSubmit}
+                            className={`p-6 rounded-3xl mb-8 border-2 animate-in slide-in-from-top duration-300 ${editItem ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50 border-slate-100'}`}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input name="name" required placeholder="Nama Perusahaan" defaultValue={editItem?.name || ''}
                                 className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium" />
@@ -151,11 +166,12 @@ export default function MitraIndustri() {
                         </div>
                         <div className="flex gap-3 mt-5">
                             <button type="submit" className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-sm hover:bg-indigo-600 transition-colors">
-                                {editItem ? 'Simpan Perubahan' : 'Tambah Mitra Baru'}
+                                {editItem ? 'Simpan Perubahan' : 'Simpan Mitra'}
                             </button>
-                            {editItem && <button type="button" onClick={() => setEditItem(null)} className="px-6 py-3 bg-slate-100 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Batal</button>}
+                            {editItem && <button type="button" onClick={() => { setEditItem(null); setShowForm(false); }} className="px-6 py-3 bg-slate-100 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors">Batal</button>}
                         </div>
                     </form>
+                )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {partners.map(p => (
@@ -166,7 +182,7 @@ export default function MitraIndustri() {
                                         <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">{p.sector}</span>
                                     </div>
                                     <div className="flex flex-col gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setEditItem({ id: p.id, name: p.name || p.companyName, sector: p.sector, address: p.address, phone: p.phone, joinedYear: p.joinedYear, contributionCount: p.contributionCount })} className="text-indigo-500 bg-indigo-50 hover:bg-indigo-100 w-8 h-8 rounded-lg flex items-center justify-center text-xs">✏️</button>
+                                        <button onClick={() => { setEditItem({ id: p.id, name: p.name || p.companyName, sector: p.sector, address: p.address, phone: p.phone, joinedYear: p.joinedYear, contributionCount: p.contributionCount }); setShowForm(true); }} className="text-indigo-500 bg-indigo-50 hover:bg-indigo-100 w-8 h-8 rounded-lg flex items-center justify-center text-xs">✏️</button>
                                         <button onClick={() => handleDeleteMitra(p.id)} className="text-rose-500 bg-rose-50 hover:bg-rose-100 w-8 h-8 rounded-lg flex items-center justify-center text-xs">🗑️</button>
                                     </div>
                                 </div>
