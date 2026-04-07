@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Bell, Trash2, X } from 'lucide-react';
+import { Bell, Trash2, User, ChevronDown, LogOut, Settings } from 'lucide-react';
 import api from '../services/api';
 
 const Navbar = () => {
@@ -10,6 +10,7 @@ const Navbar = () => {
     const loc = useLocation();
     const [notifs, setNotifs] = useState([]);
     const [showNotifMenu, setShowNotifMenu] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     const fetchNotifs = async () => {
         if (isAuthenticated && user?.role === 'Admin') {
@@ -84,13 +85,14 @@ const Navbar = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {/* Notification Bell */}
                     {isAuthenticated && user?.role === 'Admin' && (
                         <div className="relative">
                             <button 
                                 onClick={() => setShowNotifMenu(!showNotifMenu)}
                                 className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative"
                             >
-                                <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'animate-[pulse_2s_infinite]' : ''}`} />
+                                <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'animate-[pulse_2s_infinite]' : ''}`} />
                                 {unreadCount > 0 && (
                                     <span className="absolute top-1.5 right-1.5 bg-rose-500 text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -98,7 +100,7 @@ const Navbar = () => {
                                 )}
                             </button>
 
-                            {/* Dropdown Menu */}
+                            {/* Notification Dropdown Menu */}
                             {showNotifMenu && (
                                 <>
                                     <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifMenu(false)}></div>
@@ -163,7 +165,7 @@ const Navbar = () => {
                                             )}
                                         </div>
                                         <Link 
-                                            to="/mitra" 
+                                            to="/admin" 
                                             onClick={() => setShowNotifMenu(false)}
                                             className="block p-3 text-center bg-slate-50 text-[11px] font-black text-slate-500 hover:text-indigo-600 transition-colors border-t border-slate-100"
                                         >
@@ -175,12 +177,58 @@ const Navbar = () => {
                         </div>
                     )}
 
+                    {/* User Profile */}
                     {isAuthenticated ? (
-                        !loc.pathname.startsWith('/admin') && (
-                            <button onClick={handleLogout} className="text-sm font-black text-rose-600 px-4 py-2 hover:bg-rose-50 rounded-xl transition-all">
-                                Logout
+                        <div className="relative flex items-center gap-3 pl-4 border-l border-slate-100">
+                            <div className="hidden sm:flex flex-col items-end">
+                                <span className="text-sm font-black text-slate-900 leading-none lowercase">
+                                    {user?.name || 'admin'}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 mt-1 capitalize">
+                                    {user?.role === 'Admin' ? 'Administrator' : user?.role || 'Guest'}
+                                </span>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                className="flex items-center gap-2 group p-1 rounded-xl hover:bg-slate-50 transition-all"
+                            >
+                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100 group-hover:border-indigo-300 transition-all">
+                                    <User className="w-5 h-5" />
+                                </div>
+                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                             </button>
-                        )
+
+                            {/* User Profile Dropdown Menu */}
+                            {showUserMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-[55]" onClick={() => setShowUserMenu(false)}></div>
+                                    <div className="absolute top-full right-0 mt-3 w-56 bg-white shadow-2xl rounded-2xl border border-slate-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Akun Saya</p>
+                                            <p className="text-xs font-bold text-slate-700 truncate">{user?.email}</p>
+                                        </div>
+                                        <div className="p-2">
+                                            <Link 
+                                                to="/admin" 
+                                                onClick={() => setShowUserMenu(false)}
+                                                className="flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all"
+                                            >
+                                                <Settings className="w-4 h-4" />
+                                                Pengaturan Dashboard
+                                            </Link>
+                                            <button 
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                Keluar Aplikasi
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     ) : (
                         <Link to="/login" className="hidden sm:block text-sm font-black text-slate-900 px-4 py-2 hover:bg-slate-50 rounded-xl">Login</Link>
                     )}
