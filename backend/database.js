@@ -259,6 +259,36 @@ async function initDB() {
                 for (const m of mapping) { await conn.query('INSERT IGNORE INTO sdgs_pilar_mapping (id, pilar_id, sdg_id) VALUES (?, ?, ?)', m); }
             }
 
+            // SEED KELOLA_PROGRAM (Data Programs)
+            const [progRows] = await conn.query('SELECT COUNT(*) as count FROM kelola_program');
+            if (progRows[0].count === 0) {
+                const progs = [
+                    ['prog-1', 'Beasiswa Pendidikan Berkelanjutan', 'Pemberian beasiswa untuk 1000 siswa berprestasi.', 'Pendidikan', 500000000, 2024, 'Kabupaten Tasikmalaya', 'Pelajar SMA/SMK', '', 85, JSON.stringify(['Beasiswa', 'Pendidikan'])],
+                    ['prog-2', 'Penghijauan DAS Citarum', 'Penanaman 10.000 pohon di sepanjang aliran sungai.', 'Lingkungan', 250000000, 2024, 'Lintas Wilayah', 'Masyarakat Sekitar', '', 92, JSON.stringify(['Lingkungan', 'CSR'])]
+                ];
+                for (const p of progs) { await conn.query('INSERT IGNORE INTO kelola_program (id, title, description, category, budget, year, location, beneficiaries, image, impactScore, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', p); }
+            }
+
+            // SEED MITRA (Data Partners)
+            const [partnerRows] = await conn.query('SELECT COUNT(*) as count FROM direktori_mitra_csr');
+            if (partnerRows[0].count === 0) {
+                const partners = [
+                    ['mitra-1', 'PT Bank Pembangunan Daerah', '', 'Perbankan', 'Bandung', '022-123456', 5, 2019],
+                    ['mitra-2', 'PT Energi Hijau Nusantara', '', 'Energi', 'Jakarta', '021-998877', 3, 2021]
+                ];
+                for (const m of partners) { await conn.query('INSERT IGNORE INTO direktori_mitra_csr (id, companyName, logo, sector, address, phone, contributionCount, joinedYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', m); }
+            }
+
+            // SEED FISCAL YEAR
+            const [fiscRows] = await conn.query('SELECT COUNT(*) as count FROM tahun_fiskal');
+            if (fiscRows[0].count === 0) {
+                const years = [
+                    ['f-2023', 2023, 'Lalu', 'Tahun anggaran sebelumnya'],
+                    ['f-2024', 2024, 'Aktif', 'Tahun anggaran berjalan']
+                ];
+                for (const y of years) { await conn.query('INSERT IGNORE INTO tahun_fiskal (id, year, status, description) VALUES (?, ?, ?, ?)', y); }
+            }
+
             conn.release();
             console.log('Inisialisasi database dan seed selesai.');
             return;
