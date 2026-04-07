@@ -173,25 +173,32 @@ export default function MitraIndustri() {
                     </form>
                 )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {partners.map(p => (
-                            <div key={p.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all flex flex-col group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex-1 pr-4">
-                                        <h4 className="font-bold text-[15px] text-slate-800 leading-tight mb-2">{p.name || p.companyName}</h4>
-                                        <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-1 rounded-md">{p.sector}</span>
+                            <div key={p.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all flex flex-col group relative">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex-1 pr-2">
+                                        <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-1.5 py-0.5 rounded mb-1.5 inline-block">{p.sector}</span>
+                                        <h4 className="font-bold text-sm text-slate-800 leading-tight">{p.name || p.companyName}</h4>
                                     </div>
-                                    <div className="flex flex-col gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => { setEditItem({ id: p.id, name: p.name || p.companyName, sector: p.sector, address: p.address, phone: p.phone, joinedYear: p.joinedYear, contributionCount: p.contributionCount }); setShowForm(true); }} className="text-indigo-500 bg-indigo-50 hover:bg-indigo-100 w-8 h-8 rounded-lg flex items-center justify-center text-xs">✏️</button>
-                                        <button onClick={() => handleDeleteMitra(p.id)} className="text-rose-500 bg-rose-50 hover:bg-rose-100 w-8 h-8 rounded-lg flex items-center justify-center text-xs">🗑️</button>
+                                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => { setEditItem({ id: p.id, name: p.name || p.companyName, sector: p.sector, address: p.address, phone: p.phone, joinedYear: p.joinedYear, contributionCount: p.contributionCount }); setShowForm(true); }} className="text-indigo-500 bg-indigo-50 hover:bg-indigo-100 w-7 h-7 rounded-lg flex items-center justify-center text-[10px]">✏️</button>
+                                        <button onClick={() => handleDeleteMitra(p.id)} className="text-rose-500 bg-rose-50 hover:bg-rose-100 w-7 h-7 rounded-lg flex items-center justify-center text-[10px]">🗑️</button>
                                     </div>
                                 </div>
-                                <div className="text-xs text-slate-500 space-y-2 mt-auto pt-4 border-t border-slate-50">
-                                    <div className="flex items-start gap-2"><span className="shrink-0 text-slate-300">📍</span> <span>{p.address || '-'}</span></div>
-                                    <div className="flex items-center gap-2"><span className="shrink-0 text-slate-300">📞</span> <span>{p.phone || '-'}</span></div>
-                                    <div className="flex justify-between items-center mt-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <div><span className="block text-[9px] uppercase text-slate-400 font-bold tracking-wider mb-1">Bergabung</span> <strong className="text-sm text-slate-800 font-bold">{p.joinedYear}</strong></div>
-                                        <div className="text-right"><span className="block text-[9px] uppercase text-slate-400 font-bold tracking-wider mb-1">Total Program</span> <strong className="text-sm text-indigo-600 font-bold">{p.contributionCount || 0}</strong></div>
+                                <div className="text-[11px] text-slate-500 space-y-1.5 mt-auto pt-3 border-t border-slate-50">
+                                    <div className="flex items-start gap-2"><span className="shrink-0 grayscale opacity-50">📍</span> <span className="line-clamp-1">{p.address || '-'}</span></div>
+                                    <div className="flex items-center gap-2"><span className="shrink-0 grayscale opacity-50">📞</span> <span className="line-clamp-1">{p.phone || '-'}</span></div>
+                                    
+                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-50/50">
+                                        <div className="flex flex-col">
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Bergabung</span>
+                                            <span className="text-xs font-black text-slate-700">{p.joinedYear}</span>
+                                        </div>
+                                        <div className="flex flex-col text-right">
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Total Program</span>
+                                            <span className="text-xs font-black text-indigo-600">{p.contributionCount || 0}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
