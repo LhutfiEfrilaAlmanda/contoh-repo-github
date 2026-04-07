@@ -632,13 +632,17 @@ app.post('/api/programs', async (req, res) => {
     const { title, description, category, budget, year, location, beneficiaries, image, impactScore, tags } = req.body;
     const stringTags = tags ? (typeof tags === 'string' ? tags : JSON.stringify(tags)) : '[]';
     try {
-        const [existing] = await pool.query('SELECT id FROM kelola_program ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) {
-            const match = existing[0].id.match(/p-(\d+)/);
-            if (match) nextNum = parseInt(match[1]) + 1;
-        }
-        const newId = `p-${nextNum}`;
+        // Logic pencarian ID otomatis yang lebih kuat (Mencari MAX numeric part)
+        const [rows] = await pool.query('SELECT id FROM kelola_program');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/p-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `p-${maxNum + 1}`;
         await pool.query(
             `INSERT INTO kelola_program (id, title, description, category, budget, year, location, beneficiaries, image, impactScore, tags)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -671,10 +675,17 @@ app.put('/api/programs/:id', async (req, res) => {
 app.post('/api/partners', async (req, res) => {
     const { companyName, logo, sector, address, phone, contributionCount, joinedYear } = req.body;
     try {
-        const [existing] = await pool.query('SELECT id FROM direktori_mitra_csr ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) { const m = existing[0].id.match(/m-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
-        const newId = `m-${nextNum}`;
+        // Logic pencarian ID otomatis yang lebih kuat untuk Mitra (m-)
+        const [rows] = await pool.query('SELECT id FROM direktori_mitra_csr');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/m-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `m-${maxNum + 1}`;
         await pool.query(
             `INSERT INTO direktori_mitra_csr (id, companyName, logo, sector, address, phone, contributionCount, joinedYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, companyName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear()]
@@ -904,10 +915,17 @@ app.put('/api/profile/password', async (req, res) => {
 app.post('/api/submissions', async (req, res) => {
     const { companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt } = req.body;
     try {
-        const [existing] = await pool.query('SELECT id FROM kontribusi_mitra_csr ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) { const m = existing[0].id.match(/s-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
-        const newId = `s-${nextNum}`;
+        // Logic pencarian ID otomatis yang lebih kuat untuk Submissions (s-)
+        const [rows] = await pool.query('SELECT id FROM kontribusi_mitra_csr');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/s-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `s-${maxNum + 1}`;
         await pool.query(`INSERT INTO kontribusi_mitra_csr (id, companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, companyName, contactPerson || '', email || '', programId || '', status || 'Pending', commitmentAmount || 0, submittedAt || new Date().toISOString()]);
         await createNotification(`Pengajuan kontribusi baru dari ${companyName} telah diterima.`, 'info');
@@ -931,10 +949,17 @@ app.post('/api/reports/upload', uploadReport.single('file'), async (req, res) =>
     const { id_mitra, id_program } = req.body;
 
     try {
-        const [existing] = await pool.query('SELECT id FROM laporan_csr ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) { const m = existing[0].id.match(/rep-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
-        const newId = `rep-${nextNum}`;
+        // Logic pencarian ID otomatis yang lebih kuat untuk Laporan (rep-)
+        const [rows] = await pool.query('SELECT id FROM laporan_csr');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/rep-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `rep-${maxNum + 1}`;
 
         const nama_file = req.file.originalname;
         const tipe_file = req.file.mimetype.split('/')[1] || path.extname(nama_file).substring(1);
@@ -975,10 +1000,17 @@ app.put('/api/submissions/:id', async (req, res) => {
 app.post('/api/fiscal-years', async (req, res) => {
     const { year, status, description } = req.body;
     try {
-        const [existing] = await pool.query('SELECT id FROM tahun_fiskal ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) { const m = existing[0].id.match(/fy-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
-        const newId = `fy-${nextNum}`;
+        // Logic pencarian ID otomatis yang lebih kuat untuk Fiscal Years (fy-)
+        const [rows] = await pool.query('SELECT id FROM tahun_fiskal');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/fy-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `fy-${maxNum + 1}`;
         await pool.query(`INSERT INTO tahun_fiskal (id, year, status, description) VALUES (?, ?, ?, ?)`,
             [newId, year, status || 'Active', description || '']);
         await createNotification(`Tahun fiskal baru ditambahkan: ${year}`, 'success');
