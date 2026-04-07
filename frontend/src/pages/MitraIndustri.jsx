@@ -111,9 +111,31 @@ export default function MitraIndustri() {
         try {
             const sub = submissions.find(s => s.id === subId);
             if (!sub) return;
+
+            // --- AUTO REGISTER MITRA ---
+            // Jika status diubah jadi 'Terealisasi', cek apakah mitra sudah ada di direktori
+            if (newStatus === 'Terealisasi' || newStatus.toLowerCase() === 'approved') {
+                const partnerExists = partners.some(p => (p.companyName || p.name) === sub.companyName);
+                
+                if (!partnerExists) {
+                    console.log('Mendaftarkan mitra baru secara otomatis:', sub.companyName);
+                    const newPartner = {
+                        companyName: sub.companyName,
+                        sector: 'Lainnya',
+                        address: '-',
+                        phone: '-',
+                        logo: '',
+                        joinedYear: new Date().getFullYear()
+                    };
+                    const resPartner = await api.post('partners', newPartner);
+                    setPartners(prev => [...prev, resPartner.data]);
+                }
+            }
+
             const updated = { ...sub, status: newStatus };
             await api.put(`submissions/${subId}`, updated);
             setSubmissions(prev => prev.map(s => s.id === subId ? updated : s));
+            
             alert(`Berhasil. Status diubah menjadi ${newStatus}`);
         } catch (error) {
             console.error(error);
