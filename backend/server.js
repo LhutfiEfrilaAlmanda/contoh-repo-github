@@ -673,7 +673,8 @@ app.put('/api/programs/:id', async (req, res) => {
 
 // Partners (CREATE)
 app.post('/api/partners', async (req, res) => {
-    const { companyName, logo, sector, address, phone, contributionCount, joinedYear } = req.body;
+    const { companyName, logo, sector, address, phone, contributionCount, joinedYear, name } = req.body;
+    const finalName = companyName || name;
     try {
         // Logic pencarian ID otomatis yang lebih kuat untuk Mitra (m-)
         const [rows] = await pool.query('SELECT id FROM direktori_mitra_csr');
@@ -688,18 +689,19 @@ app.post('/api/partners', async (req, res) => {
         const newId = `m-${maxNum + 1}`;
         await pool.query(
             `INSERT INTO direktori_mitra_csr (id, companyName, logo, sector, address, phone, contributionCount, joinedYear) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [newId, companyName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear()]
+            [newId, finalName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear()]
         );
-        await createNotification(`Mitra baru ditambahkan: ${companyName}`, 'success');
-        res.json({ success: true, id: newId, companyName, logo, sector, address, phone, contributionCount, joinedYear });
+        await createNotification(`Mitra baru ditambahkan: ${finalName}`, 'success');
+        res.json({ success: true, id: newId, companyName: finalName, logo, sector, address, phone, contributionCount, joinedYear });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 app.put('/api/partners/:id', async (req, res) => {
-    const { companyName, logo, sector, address, phone, contributionCount, joinedYear } = req.body;
+    const { companyName, logo, sector, address, phone, contributionCount, joinedYear, name } = req.body;
+    const finalName = companyName || name;
     try {
         await pool.query(`UPDATE direktori_mitra_csr SET companyName=?, logo=?, sector=?, address=?, phone=?, contributionCount=?, joinedYear=? WHERE id=?`,
-            [companyName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear(), req.params.id]);
-        await createNotification(`Data mitra "${companyName}" telah diubah.`, 'info');
+            [finalName, logo || '', sector || '', address || '', phone || '', contributionCount || 0, joinedYear || new Date().getFullYear(), req.params.id]);
+        await createNotification(`Data mitra "${finalName}" telah diubah.`, 'info');
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });

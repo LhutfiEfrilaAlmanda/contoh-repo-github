@@ -40,7 +40,7 @@ export default function MitraIndustri() {
         e.preventDefault();
         const fd = new FormData(e.target);
         const item = {
-            name: fd.get('name'),
+            companyName: fd.get('name'),
             sector: fd.get('sector'),
             address: fd.get('address'),
             phone: fd.get('phone'),
@@ -54,6 +54,7 @@ export default function MitraIndustri() {
                 setPartners(prev => prev.map(x => x.id === editItem.id ? { ...x, ...item } : x));
             } else {
                 const r = await api.post('partners', item);
+                // Kembalikan ke format yang diharapkan UI jika perlu, atau pastikan UI konsisten
                 setPartners(prev => [...prev, r.data]);
             }
             setEditItem(null); 
