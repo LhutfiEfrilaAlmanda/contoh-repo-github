@@ -12,6 +12,7 @@ export default function MitraIndustri() {
     // UI States
     const [editItem, setEditItem] = useState(null);
     const [showForm, setShowForm] = useState(false);
+    const [showSubForm, setShowSubForm] = useState(false); // Form input kontribusi manual
     const [selectedPartner, setSelectedPartner] = useState(null); // State untuk Modal Detail
 
     // States for filtering Verifikasi Kontribusi
@@ -79,7 +80,32 @@ export default function MitraIndustri() {
         } catch (err) { alert('Gagal menghapus.'); }
     };
 
-    // --- MANAJEMEN KONTRIBUSI (VERIFIKASI) ---
+    // --- MANAJEMEN KONTRIBUSI (VERIFIKASI & INPUT MANUAL) ---
+    const handleSubFormSubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const item = {
+            companyName: fd.get('companyName'),
+            programId: fd.get('programId'),
+            commitmentAmount: Number(fd.get('commitmentAmount') || 0),
+            status: fd.get('status') || 'Terealisasi',
+            contactPerson: fd.get('contactPerson') || 'Admin',
+            email: fd.get('email') || '',
+            submittedAt: new Date().toISOString()
+        };
+
+        try {
+            const r = await api.post('submissions', item);
+            setSubmissions(prev => [r.data, ...prev]);
+            setShowSubForm(false);
+            e.target.reset();
+            alert('Kontribusi berhasil dicatat!');
+        } catch (err) {
+            console.error(err);
+            alert('Gagal mencatat kontribusi.');
+        }
+    };
+
     const handleUpdateStatus = async (subId, newStatus) => {
         if (!window.confirm(`Ubah status kontribusi ini jadi ${newStatus}?`)) return;
         try {
@@ -140,14 +166,24 @@ export default function MitraIndustri() {
                     </button>
                 </div>
 
-                {activeTab === 'direktori' && (
-                    <button 
-                        onClick={() => setShowForm(!showForm)}
-                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-sm ${showForm ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
-                    >
-                        {showForm ? '✕ Tutup Form' : '+ Tambah Mitra BARU'}
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {activeTab === 'direktori' && (
+                        <button 
+                            onClick={() => setShowForm(!showForm)}
+                            className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-sm ${showForm ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                        >
+                            {showForm ? '✕ Tutup Form' : '+ Tambah Mitra BARU'}
+                        </button>
+                    )}
+                    {activeTab === 'kontribusi' && (
+                        <button 
+                            onClick={() => setShowSubForm(!showSubForm)}
+                            className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-sm ${showSubForm ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                        >
+                            {showSubForm ? '✕ Tutup Form' : '+ Input Kontribusi'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {activeTab === 'direktori' ? (
@@ -224,6 +260,53 @@ export default function MitraIndustri() {
                 </>
             ) : (
                 <>
+                    {/* FORM INPUT KONTRIBUSI MANUAL (ADMIN) */}
+                    {showSubForm && (
+                        <form onSubmit={handleSubFormSubmit}
+                            className="p-6 rounded-3xl mb-8 bg-indigo-50 border-2 border-indigo-100 animate-in slide-in-from-top duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih Mitra</label>
+                                    <select name="companyName" required className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <option value="">-- Pilih Perusahaan --</option>
+                                        {partners.map(p => <option key={p.id} value={p.companyName || p.name}>{p.companyName || p.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih Program</label>
+                                    <select name="programId" required className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <option value="">-- Pilih Program CSR --</option>
+                                        {programs.map(pr => <option key={pr.id} value={pr.id}>{pr.title}</option>)}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nilai Anggaran (Rp)</label>
+                                    <input name="commitmentAmount" type="number" required placeholder="Contoh: 50000000"
+                                        className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium" />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Status</label>
+                                    <select name="status" className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium">
+                                        <option value="Terealisasi">Terealisasi (Selesai)</option>
+                                        <option value="Menunggu Verifikasi">Menunggu Verifikasi</option>
+                                        <option value="Ditolak">Ditolak</option>
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nama Kontak / Admin</label>
+                                    <input name="contactPerson" defaultValue="Administrator" placeholder="Nama penginput"
+                                        className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium" />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button type="submit" className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm hover:bg-slate-900 transition-colors shadow-lg shadow-indigo-200">
+                                    Simpan Kontribusi
+                                </button>
+                                <button type="button" onClick={() => setShowSubForm(false)} className="px-6 py-3 bg-white text-slate-500 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors">Batal</button>
+                            </div>
+                        </form>
+                    )}
+
                     {/* TAB VERIFIKASI KONTRIBUSI */}
                     <div className="flex flex-col md:flex-row gap-4 mb-6">
                         <div className="relative flex-1">
