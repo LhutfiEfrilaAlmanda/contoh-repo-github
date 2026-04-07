@@ -128,11 +128,11 @@ app.post('/api/verify-access', async (req, res) => {
     res.header('Access-Control-Allow-Credentials', 'true');
     console.log('LOGIN ATTEMPT (alt):', req.body?.email);
     const { email, password } = req.body;
-    
+
     try {
         // Pastikan kolom password ada di tabel pengguna
         await ensureProfileColumns();
-        
+
         // --- CHECK DB FOR CUSTOM PASSWORD ---
         if (email === 'admin') {
             let savedPassword = 'admin123';
@@ -144,19 +144,19 @@ app.post('/api/verify-access', async (req, res) => {
                 if (dbUsers && dbUsers.length > 0 && dbUsers[0].password) {
                     savedPassword = dbUsers[0].password;
                 }
-            } catch(e) {
+            } catch (e) {
                 console.log('DB check skipped, using default password');
             }
-            
+
             const isLegacyBcrypt = savedPassword.startsWith('$2b$');
             let isValid = false;
-            
+
             if (isLegacyBcrypt) {
                 isValid = (password === 'admin123');
             } else {
                 isValid = (password === savedPassword);
             }
-            
+
             if (!isValid) {
                 return res.status(401).json({ error: 'Email atau password salah.' });
             }
@@ -165,17 +165,17 @@ app.post('/api/verify-access', async (req, res) => {
                 user: { id: '1', name: 'Admin Utama', email: email, role: 'Admin' }
             });
         }
-        
+
         const [users] = await pool.query('SELECT * FROM pengguna WHERE email = ? OR name = ?', [email, email]);
         if (users.length === 0) {
             return res.status(401).json({ error: 'Email atau password salah.' });
         }
         const user = users[0];
-        
+
         // VERIFIKASI SANDI UNTUK PENGGUNA UMUM (Operator dsb)
         const savedPw = user.password || 'admin123';
         const isLegacyBcrypt = savedPw.startsWith('$2b$');
-        
+
         if (isLegacyBcrypt) {
             if (password !== 'admin123') {
                 return res.status(401).json({ error: 'Email atau password salah.' });
@@ -183,7 +183,7 @@ app.post('/api/verify-access', async (req, res) => {
         } else if (password !== savedPw) {
             return res.status(401).json({ error: 'Email atau password salah.' });
         }
-        
+
         await pool.query('UPDATE pengguna SET lastLogin = ? WHERE id = ?', [new Date().toISOString(), user.id]);
         res.json({
             token: `dummy-jwt-token-${user.id}`,
@@ -199,7 +199,7 @@ app.post('/api/verify-access', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
-    
+
     console.log('LOGIN ATTEMPT:', req.body?.email);
     const { email, password } = req.body;
     try {
@@ -249,18 +249,18 @@ app.get('/api/programs', async (req, res) => {
             FROM kelola_program p
             ORDER BY LENGTH(p.id), p.id ASC
         `);
-        
+
         const mapped = rows.map(r => {
             let parsedTags = [];
             if (r.tags) {
                 try { parsedTags = JSON.parse(r.tags); }
                 catch (e) { parsedTags = typeof r.tags === 'string' ? r.tags.split(',').map(t => t.trim()) : []; }
             }
-            return { 
-                ...r, 
+            return {
+                ...r,
                 allocatedAmount: Number(r.allocatedAmount) || 0,
                 participantCount: Number(r.participantCount) || 0,
-                tags: parsedTags 
+                tags: parsedTags
             };
         });
         res.json(mapped);
@@ -406,7 +406,63 @@ app.get('/api/stats/dashboard', async (req, res) => {
 });
 
 // ========== SMART CSR CHATBOT (SQL-BASED) ==========
-// ATURAN:
+// Initialize Gemini AI
+const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+const genAI = new GoogleGenerativeAI(apiKey);
+const mainModel = genAI.getGenerativeModel(
+    { model: "gemini-2.0-flash-exp" },
+    { apiVersion: "v1beta" }
+);
+
+// === HELPER: FALLBACK SEARCH (Jika AI Mati) ===
+async function performFallbackSearch(message) {
+    const msg = message.toLowerCase().trim();
+    const cleanMsg = msg.replace(/[^\w\s]/gi, '');
+    const words = cleanMsg.split(/\s+/).filter(w => w.length > 2); // Ambil kata kunci > 2 huruf
+    
+    if (words.length === 0) return null;
+
+    try {
+        // 1. Cari Program
+        let programQuery = "SELECT title, category, location, budget FROM kelola_program WHERE ";
+        programQuery += words.map(w => `(title LIKE '%${w}%' OR category LIKE '%${w}%' OR location LIKE '%${w}%')`).join(' OR ');
+        programQuery += " LIMIT 5";
+        
+        const [programs] = await pool.query(programQuery);
+        
+        // 2. Cari Mitra
+        let partnerQuery = "SELECT name, sector, joinedYear FROM direktori_mitra_csr WHERE ";
+        partnerQuery += words.map(w => `(name LIKE '%${w}%' OR sector LIKE '%${w}%')`).join(' OR ');
+        partnerQuery += " LIMIT 5";
+        
+        const [partners] = await pool.query(partnerQuery);
+
+        if (programs.length === 0 && partners.length === 0) return null;
+
+        let response = "Maaf, saat ini AI pembantu saya sedang dalam pemeliharaan. Namun, saya menemukan data berikut di portal kami:\n\n";
+        
+        if (programs.length > 0) {
+            response += " PROGRAM TERKAIT:\n";
+            programs.forEach(p => {
+                response += `- ${p.title} (${p.category} di ${p.location})\n`;
+            });
+        }
+        
+        if (partners.length > 0) {
+            response += "\n MITRA TERKAIT:\n";
+            partners.forEach(m => {
+                response += `- ${m.name} (Sektor: ${m.sector})\n`;
+            });
+        }
+        
+        response += "\nAda lagi yang bisa saya bantu terkait data di atas?";
+        return response;
+    } catch (err) {
+        console.error('Fallback Search Error:', err);
+        return null;
+    }
+}
+
 // 1. Hanya generate SQL SELECT — tidak boleh INSERT, UPDATE, DELETE, DROP
 // 2. Tidak akses tabel users/roles dari db_auth
 // 3. Jika tidak bisa dijawab → TIDAK_BISA_DIJAWAB
@@ -419,201 +475,90 @@ app.post('/api/chat', async (req, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
 
+    const msg = message.toLowerCase().trim();
+    const msgClean = msg.replace(/[^\w\s]/gi, '');
+    const words = msgClean.split(/\s+/).filter(w => w.length > 1);
+
+    // === RULE 1: ETIKA & KONTEN NEGATIF (Prioritas Utama) ===
+    const negativeWords = ['bodoh', 'goblok', 'tolol', 'bego', 'anjing', 'bangsat', 'bajingan', 'brengsek', 'idiot', 'kampret', 'monyet', 'tai', 'setan', 'iblis', 'kafir', 'rasis', 'sara', 'sampah', 'sialan', 'kontol', 'memek', 'ngentot', 'jancok', 'asu', 'cok', 'kimak', 'puki'];
+    if (negativeWords.some(w => msgClean.includes(w))) {
+        return res.json({ reply: 'Mohon gunakan bahasa yang sopan dan sesuai. Saya siap membantu terkait informasi Portal CSR.', tag: 'KONTEN_NEGATIF' });
+    }
+
+    // === RULE 2: GREETING, THANK, BYE (Static) ===
+    const isGreet = ['halo', 'hai', 'hi', 'hey', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'hello', 'apa kabar'].some(g => msg.includes(g));
+    if (isGreet && words.length <= 5) {
+        const greetings = [
+            "Halo juga! Ada yang bisa saya bantu?",
+            "Hai! Senang bertemu dengan Anda, ada yang bisa saya bantu?",
+            "Halo! Silakan tanya apa saja ya terkait data CSR.",
+            "Halo! Saya Asisten Data Portal CSR. Ada yang bisa saya bantu terkait data atau panduan sistem?"
+        ];
+        return res.json({ reply: greetings[Math.floor(Math.random() * greetings.length)] });
+    }
+
+    // === ATTEMPT AI PROCESSING (GEMINI) ===
     try {
-        const msg = message.toLowerCase().trim();
-        const msgClean = msg.replace(/[^\w\s]/gi, '');
-        const words = msgClean.split(/\s+/).filter(w => w.length > 1);
+        const schemaDescription = `
+        Tabel yang tersedia:
+        1. kelola_program: id, title, description, category, budget, year, location, beneficiaries, impactScore, tags
+        2. direktori_mitra_csr: id, name, sector, address, phone, contributionCount, joinedYear
+        3. regulasi: id, title, number, year, type, description, fileSize, fileUrl
+        4. kontribusi_mitra_csr: id, companyName, contactPerson, email, programId, partnerId, status, commitmentAmount, submittedAt
+        5. sdgs_tujuan: id, no_get, judul, keterangan, warna
+        6. sdgs_pilar: id, kode_pilar, nama_pilar, keterangan
+        `;
 
-        // === RULE 6: KONTEN NEGATIF ===
-        const negativeWords = ['bodoh','goblok','tolol','bego','anjing','bangsat','bajingan','brengsek','idiot','kampret','monyet','tai','setan','iblis','kafir','rasis','sara','sampah','sialan','kontol','memek','ngentot','jancok','asu','cok','kimak','puki'];
-        if (negativeWords.some(w => msgClean.includes(w))) {
-            return res.json({ reply: '⛔ **KONTEN_NEGATIF**\n\nMohon maaf, saya tidak dapat memproses pesan yang mengandung konten negatif, kata kasar, atau unsur SARA.\n\nSilakan ajukan pertanyaan dengan bahasa yang baik dan sopan terkait program CSR. 🙏', tag: 'KONTEN_NEGATIF' });
-        }
+        const sqlPrompt = `Tugas: Ubah pertanyaan pengguna menjadi SQL SELECT query (MySQL).
+        Aturan: HANYA SELECT. LIMIT 50. Jika tidak relevan, balas: OUT_OF_CONTEXT. 
+        Tulis SQL dalam satu baris.
+        Schema: ${schemaDescription}
+        Pertanyaan: "${message}"`;
 
-        // === RULE 5: PANDUAN SISTEM ===
-        const guideWords = ['cara pakai','cara kerja','fitur','panduan','tutorial','role','akses','hak akses','login','cara login','cara daftar akun','dataset','cara upload','cara download','cara menggunakan','guide','manual','petunjuk','cara masuk','cara buat','fungsi tombol','navigasi'];
-        if (guideWords.some(g => msg.includes(g))) {
-            return res.json({ reply: '📖 **PANDUAN_SISTEM**\n\nBerikut panduan penggunaan CSR Portal:\n\n**🔑 Login & Akses:**\n• Masuk via halaman Login dengan email & password\n• Terdapat role: Operator, Dinas, Admin (sesuai peran di sistem)\n\n**📋 Fitur Utama:**\n• **Program CSR** — Kelola program sosial perusahaan\n• **Mitra CSR** — Direktori perusahaan mitra\n• **SDGs** — 17 Tujuan Pembangunan Berkelanjutan\n• **Pilar CSR** — Pengelompokan area fokus\n• **Regulasi** — Peraturan & dasar hukum\n• **Statistik** — Dashboard ringkasan data\n• **Chat AI** — Konsultasi data CSR (halaman ini)\n\n**📝 Cara Mengelola Data:**\n1. Buka **Panel Admin** dari navbar\n2. Pilih menu di sidebar kiri\n3. Gunakan tombol **Tambah Data** untuk menambah\n4. Gunakan ikon ✏️ untuk edit, 🗑️ untuk hapus\n\nAda pertanyaan lain tentang data CSR?', tag: 'PANDUAN_SISTEM' });
-        }
+        const sqlResult = await mainModel.generateContent(sqlPrompt);
+        const sqlResponse = sqlResult.response.text().trim();
 
-        // === GREETING, THANK, BYE ===
-        const isGreet = ['halo','hai','hi','hey','pagi','siang','sore','malam','assalamualaikum','hello','apa kabar'].some(g => msg.includes(g));
-        const isThank = ['terima kasih','makasih','thanks','trims'].some(t => msg.includes(t));
-        const isBye = ['bye','dadah','sampai jumpa'].some(b => msg.includes(b));
-
-        if (isGreet && words.length <= 5) {
-            return res.json({ reply: 'Halo! 👋 Selamat datang di **Asisten Data CSR Portal**!\n\nSaya menjawab berdasarkan **data real** dari database:\n\n📋 _"Tampilkan semua program CSR"_\n🤝 _"Siapa saja mitra dari sektor pertambangan?"_\n🎯 _"Jelaskan SDG nomor 4"_\n📊 _"Berapa total dana CSR?"_\n📜 _"Ada regulasi apa saja?"_\n🏛️ _"Daftar pilar CSR"_\n\nSilakan tanyakan apa saja tentang data CSR!' });
-        }
-        if (isThank) return res.json({ reply: 'Sama-sama! 😊 Senang bisa membantu. Jangan ragu bertanya lagi tentang data CSR kapanpun.' });
-        if (isBye) return res.json({ reply: 'Sampai jumpa! 👋 Semoga data yang saya berikan bermanfaat.' });
-
-        // === SCHEMA & FORBIDDEN ===
-        const FORBIDDEN = ['pengguna','users','roles','peran_sistem'];
-
-        // === NL-TO-SQL ENGINE ===
-        let sqlQuery = null;
-        let queryLabel = '';
-
-        // PROGRAM queries
-        if (['program','proyek','kegiatan'].some(w => msg.includes(w))) {
-            if (['berapa','jumlah','total','hitung','count'].some(w => msg.includes(w))) {
-                if (['kategori','category','per kategori'].some(w => msg.includes(w))) {
-                    sqlQuery = "SELECT category, COUNT(*) as jumlah FROM kelola_program GROUP BY category ORDER BY jumlah DESC LIMIT 50";
-                    queryLabel = 'Jumlah Program per Kategori';
-                } else if (['lokasi','wilayah','daerah'].some(w => msg.includes(w))) {
-                    sqlQuery = "SELECT location, COUNT(*) as jumlah FROM kelola_program GROUP BY location ORDER BY jumlah DESC LIMIT 50";
-                    queryLabel = 'Jumlah Program per Lokasi';
-                } else {
-                    sqlQuery = "SELECT COUNT(*) as total_program FROM kelola_program";
-                    queryLabel = 'Total Program CSR';
-                }
-            } else if (['dana','anggaran','budget','terbesar','tertinggi'].some(w => msg.includes(w))) {
-                sqlQuery = "SELECT title, category, location, budget, year FROM kelola_program ORDER BY budget DESC LIMIT 10";
-                queryLabel = 'Program dengan Dana Terbesar';
-            } else if (['dampak','impact','skor'].some(w => msg.includes(w))) {
-                sqlQuery = "SELECT title, category, impactScore, location FROM kelola_program ORDER BY impactScore DESC LIMIT 10";
-                queryLabel = 'Program dengan Dampak Tertinggi';
-            } else {
-                const st = words.filter(w => !['program','csr','semua','tampilkan','ada','apa','saja','yang','di','dan','untuk','dari','list','daftar'].includes(w));
-                if (st.length > 0) {
-                    const like = st.map(t => `(title LIKE '%${t}%' OR description LIKE '%${t}%' OR category LIKE '%${t}%' OR location LIKE '%${t}%')`).join(' AND ');
-                    sqlQuery = `SELECT title, category, location, budget, beneficiaries, year FROM kelola_program WHERE ${like} LIMIT 50`;
-                    queryLabel = 'Pencarian Program: ' + st.join(' ');
-                } else {
-                    sqlQuery = "SELECT title, category, location, budget, beneficiaries, year FROM kelola_program ORDER BY year DESC, title ASC LIMIT 50";
-                    queryLabel = 'Daftar Program CSR';
-                }
-            }
-        }
-        // MITRA queries
-        else if (['mitra','partner','perusahaan','korporasi','rekanan'].some(w => msg.includes(w))) {
-            if (['berapa','jumlah','total','count'].some(w => msg.includes(w))) {
-                if (['sektor','industri'].some(w => msg.includes(w))) {
-                    sqlQuery = "SELECT sector, COUNT(*) as jumlah FROM direktori_mitra_csr GROUP BY sector ORDER BY jumlah DESC LIMIT 50";
-                    queryLabel = 'Jumlah Mitra per Sektor';
-                } else {
-                    sqlQuery = "SELECT COUNT(*) as total_mitra FROM direktori_mitra_csr";
-                    queryLabel = 'Total Mitra CSR';
-                }
-            } else {
-                const st = words.filter(w => !['mitra','partner','perusahaan','semua','tampilkan','ada','apa','saja','yang','di','dari','siapa','list','daftar','csr'].includes(w));
-                if (st.length > 0) {
-                    const like = st.map(t => `(companyName LIKE '%${t}%' OR sector LIKE '%${t}%' OR address LIKE '%${t}%')`).join(' AND ');
-                    sqlQuery = `SELECT companyName, sector, address, phone, joinedYear FROM direktori_mitra_csr WHERE ${like} LIMIT 50`;
-                    queryLabel = 'Pencarian Mitra: ' + st.join(' ');
-                } else {
-                    sqlQuery = "SELECT companyName, sector, address, phone, joinedYear FROM direktori_mitra_csr ORDER BY companyName ASC LIMIT 50";
-                    queryLabel = 'Daftar Mitra CSR';
-                }
-            }
-        }
-        // SDGs queries
-        else if (['sdg','sdgs','tpb','tujuan pembangunan'].some(w => msg.includes(w))) {
-            const numMatch = msg.match(/(\d+)/);
-            if (numMatch) {
-                sqlQuery = `SELECT no_get, judul, keterangan FROM sdgs_tujuan WHERE no_get = ${parseInt(numMatch[1])} LIMIT 1`;
-                queryLabel = 'Detail SDG ' + numMatch[1];
-            } else {
-                sqlQuery = "SELECT no_get, judul, keterangan FROM sdgs_tujuan ORDER BY no_get ASC LIMIT 50";
-                queryLabel = 'Daftar SDGs';
-            }
-        }
-        // PILAR queries
-        else if (['pilar','pillar'].some(w => msg.includes(w))) {
-            sqlQuery = "SELECT kode_pilar, nama_pilar, keterangan FROM sdgs_pilar ORDER BY kode_pilar ASC LIMIT 50";
-            queryLabel = 'Daftar Pilar CSR';
-        }
-        // REGULASI queries
-        else if (['regulasi','peraturan','undang','hukum','perda','aturan'].some(w => msg.includes(w))) {
-            sqlQuery = "SELECT title, year, description FROM regulasi ORDER BY year DESC LIMIT 50";
-            queryLabel = 'Daftar Regulasi CSR';
-        }
-        // DANA/KONTRIBUSI queries
-        else if (['dana','anggaran','kontribusi','sumbangan','donasi','tersalurkan','realisasi'].some(w => msg.includes(w))) {
-            if (['total','berapa','jumlah'].some(w => msg.includes(w))) {
-                sqlQuery = "SELECT COUNT(*) as total_kontribusi, COALESCE(SUM(commitmentAmount),0) as total_dana, SUM(CASE WHEN status='Approved' OR status='Terealisasi' THEN commitmentAmount ELSE 0 END) as dana_disetujui FROM kontribusi_mitra_csr";
-                queryLabel = 'Ringkasan Dana Kontribusi';
-            } else {
-                sqlQuery = "SELECT programId, partnerId, commitmentAmount, status FROM kontribusi_mitra_csr ORDER BY commitmentAmount DESC LIMIT 50";
-                queryLabel = 'Daftar Kontribusi';
-            }
-        }
-        // WILAYAH queries
-        else if (['wilayah','lokasi','daerah','kota','kabupaten'].some(w => msg.includes(w)) && !['program'].some(w => msg.includes(w))) {
-            sqlQuery = "SELECT name FROM wilayah_kerja ORDER BY name ASC LIMIT 50";
-            queryLabel = 'Daftar Wilayah Kerja';
-        }
-        // SEKTOR queries
-        else if (['sektor','industri'].some(w => msg.includes(w)) && !['mitra'].some(w => msg.includes(w))) {
-            sqlQuery = "SELECT name FROM sektor_industri ORDER BY name ASC LIMIT 50";
-            queryLabel = 'Daftar Sektor Industri';
-        }
-        // STATISTIK UMUM
-        else if (['statistik','ringkasan','rekap','rangkuman','overview','dashboard'].some(w => msg.includes(w)) || (msg.includes('berapa') && msg.includes('total'))) {
-            sqlQuery = "SELECT (SELECT COUNT(*) FROM kelola_program) as total_program, (SELECT COUNT(*) FROM direktori_mitra_csr) as total_mitra, (SELECT COALESCE(SUM(commitmentAmount),0) FROM kontribusi_mitra_csr WHERE status IN ('Approved','Terealisasi')) as total_dana, (SELECT COUNT(*) FROM regulasi) as total_regulasi, (SELECT COUNT(*) FROM sdgs_tujuan) as total_sdgs, (SELECT COUNT(*) FROM sdgs_pilar) as total_pilar";
-            queryLabel = 'Statistik Umum CSR Portal';
+        if (sqlResponse.includes('OUT_OF_CONTEXT')) {
+            return res.json({ reply: 'Maaf, pertanyaan tersebut berada di luar konteks Portal CSR atau tidak tersedia dalam sistem.' });
         }
 
-        // === RULE 4: TIDAK BISA DIJAWAB ===
-        if (!sqlQuery) {
-            const csrish = ['csr','program','mitra','sdg','pilar','regulasi','dana','kontribusi','sosial'].some(w => msg.includes(w));
-            if (csrish) {
-                return res.json({ reply: '🔍 Saya tidak menemukan pola query yang cocok. Coba tanyakan lebih spesifik:\n\n• _"Tampilkan semua program CSR"_\n• _"Berapa jumlah mitra per sektor?"_\n• _"Jelaskan SDG 4"_\n• _"Dana terbesar program apa?"_\n• _"Daftar regulasi CSR"_', tag: 'TIDAK_BISA_DIJAWAB' });
-            }
-            return res.json({ reply: '⚠️ **TIDAK_BISA_DIJAWAB**\n\nPertanyaan ini tidak dapat dijawab dari database CSR Portal.\n\nSaya hanya bisa menjawab tentang:\n📋 Program CSR\n🤝 Mitra CSR\n🎯 SDGs\n🏛️ Pilar CSR\n📜 Regulasi\n💰 Dana/Kontribusi\n📊 Statistik\n\nSilakan ajukan pertanyaan terkait topik di atas!', tag: 'TIDAK_BISA_DIJAWAB' });
+        const unauthorized = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE'];
+        if (unauthorized.some(cmd => sqlResponse.toUpperCase().includes(cmd))) {
+            return res.json({ reply: 'Query ditolak - operasi tidak diizinkan.' });
         }
 
-        // === SECURITY CHECK ===
-        const sqlUp = sqlQuery.toUpperCase();
-        if (['INSERT','UPDATE','DELETE','DROP','ALTER','TRUNCATE','CREATE'].some(cmd => sqlUp.includes(cmd))) {
-            return res.json({ reply: '🚫 Query ditolak — hanya SELECT yang diperbolehkan.', tag: 'BLOCKED' });
-        }
-        if (FORBIDDEN.some(t => sqlQuery.toLowerCase().includes(t))) {
-            return res.json({ reply: '🔒 Akses ke tabel pengguna/roles tidak diperbolehkan.', tag: 'BLOCKED' });
-        }
+        console.log('[GEMINI SQL]', sqlResponse);
+        const [rows] = await pool.query(sqlResponse);
 
-        // === EXECUTE SQL ===
-        console.log('[CHATBOT SQL]', sqlQuery);
-        const [rows] = await pool.query(sqlQuery);
-
-        // === FORMAT RESULTS ===
-        let reply = '';
         if (!rows || rows.length === 0) {
-            reply = `📭 **${queryLabel}**\n\nTidak ada data ditemukan.`;
-        } else if (rows.length === 1 && Object.keys(rows[0]).length <= 3) {
-            reply = `📊 **${queryLabel}:**\n\n`;
-            Object.entries(rows[0]).forEach(([k, v]) => {
-                const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                reply += `• **${label}:** ${typeof v === 'number' && v > 999 ? v.toLocaleString('id-ID') : v}\n`;
-            });
-        } else if (rows.length === 1) {
-            reply = `📋 **${queryLabel}:**\n\n`;
-            Object.entries(rows[0]).forEach(([k, v]) => {
-                if (v === null || v === '') return;
-                const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                reply += `• **${label}:** ${typeof v === 'number' && v > 999 ? v.toLocaleString('id-ID') : v}\n`;
-            });
-        } else {
-            reply = `📋 **${queryLabel}** (${rows.length} data):\n\n`;
-            const keys = Object.keys(rows[0]);
-            rows.forEach((row, i) => {
-                const main = row[keys[0]];
-                const rest = keys.slice(1).map(k => {
-                    let v = row[k];
-                    if (v === null || v === '') return null;
-                    if (typeof v === 'number' && v > 999) v = v.toLocaleString('id-ID');
-                    return v;
-                }).filter(Boolean).join(' | ');
-                reply += `${i+1}. **${main}**${rest ? ' — ' + rest : ''}\n`;
-            });
+            return res.json({ reply: 'Maaf, data tersebut tidak ditemukan dalam sistem Portal CSR kami.' });
         }
-        reply += `\n_Query: \`${sqlQuery}\`_\n\nAda pertanyaan lain tentang data CSR?`;
 
-        return res.json({ reply, sql: sqlQuery, tag: 'SQL_RESULT' });
+        const formatPrompt = `Sajikan data ini menjadi jawaban Bahasa Indonesia sopan & profesional (Tanpa Emoji).
+        Daftar: Bullet point. Uang: Rupiah. Sumber: Portal CSR.
+        Pertanyaan: "${message}"
+        Data: ${JSON.stringify(rows)}
+        Jawaban:`;
+
+        const humanResult = await mainModel.generateContent(formatPrompt);
+        const humanReply = humanResult.response.text().trim();
+
+        return res.json({ reply: humanReply, sql: sqlResponse, tag: 'GEMINI_AI' });
 
     } catch (error) {
-        console.error('Chat SQL Error:', error);
-        res.status(500).json({ error: 'Terjadi kesalahan: ' + error.message });
+        console.warn('AI Unavailable, switching to Fallback Search:', error.message);
+        
+        // === AI FAILED -> FALLBACK TO DATABASE SEARCH ===
+        const fallbackReply = await performFallbackSearch(message);
+        if (fallbackReply) {
+            return res.json({ reply: fallbackReply, tag: 'FALLBACK_MODE' });
+        }
+
+        // Final Fail
+        return res.json({ 
+            reply: 'Maaf, asisten cerdas kami sedang mengalami gangguan koneksi. Harap tunggu sebentar atau periksa API Key Anda. Pertanyaan tersebut juga tidak ditemukan dalam pencarian data dasar kami.',
+            error: error.message
+        });
     }
 });
 
@@ -715,7 +660,7 @@ app.post('/api/pillars', async (req, res) => {
         const newId = `pil-${nextNum}`;
         await pool.query(`INSERT INTO sdgs_pilar (id, kode_pilar, nama_pilar, keterangan) VALUES (?, ?, ?, ?)`,
             [newId, kode_pilar, nama_pilar, keterangan || '']);
-        
+
         if (sdg_ids && Array.isArray(sdg_ids)) {
             for (const sdg_id of sdg_ids) {
                 const mapId = `map-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -731,7 +676,7 @@ app.put('/api/pillars/:id', async (req, res) => {
     try {
         await pool.query(`UPDATE sdgs_pilar SET kode_pilar=?, nama_pilar=?, keterangan=? WHERE id=?`,
             [kode_pilar, nama_pilar, keterangan || '', req.params.id]);
-        
+
         // Update mapping
         await pool.query(`DELETE FROM sdgs_pilar_mapping WHERE pilar_id = ?`, [req.params.id]);
         if (sdg_ids && Array.isArray(sdg_ids)) {
@@ -801,7 +746,7 @@ app.put('/api/users/:id', async (req, res) => {
 
 // Safe column adder (MySQL doesn't support IF NOT EXISTS for columns)
 async function safeAddColumn(table, column, type) {
-    try { await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`); } catch(e) { /* column already exists */ }
+    try { await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`); } catch (e) { /* column already exists */ }
 }
 
 // Run migrations once on first profile request
@@ -868,7 +813,7 @@ app.put('/api/profile/password', async (req, res) => {
     try {
         await ensureProfileColumns();
         const [users] = await pool.query('SELECT id, password FROM pengguna WHERE email = ?', [email]);
-        
+
         if (users.length === 0 && email === 'admin') {
             if (currentPassword !== 'admin123') {
                 return res.status(401).json({ error: 'Kata sandi lama salah.' });
@@ -878,14 +823,14 @@ app.put('/api/profile/password', async (req, res) => {
                 [newId, 'Admin Utama', email, 'Admin', newPassword, new Date().toISOString()]);
             return res.json({ success: true });
         }
-        
+
         if (users.length === 0) {
             return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
         }
 
         const user = users[0];
         const storedPassword = user.password || 'admin123';
-        
+
         const isLegacyBcrypt = storedPassword.startsWith('$2b$');
         let isValid = false;
 
@@ -1069,7 +1014,7 @@ app.get('/api/roles', async (req, res) => {
         const [roles] = await pool.query('SELECT * FROM peran_sistem');
         const parsedRoles = roles.map(r => {
             let parsedMenus = [];
-            try { parsedMenus = JSON.parse(r.menus); } catch(e) {}
+            try { parsedMenus = JSON.parse(r.menus); } catch (e) { }
             return { ...r, menus: parsedMenus };
         });
         res.json(parsedRoles);
@@ -1127,10 +1072,10 @@ app.get('/', (req, res) => {
 // Generic Error Handler
 app.use((err, req, res, next) => {
     console.error('SERVER CRASH PREVENTED:', err.stack);
-    
+
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
-    
+
     if (!res.headersSent) {
         res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
     }
