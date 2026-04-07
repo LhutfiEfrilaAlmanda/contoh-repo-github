@@ -178,6 +178,25 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`);
 
+            // --- AUTO MIGRATIONS (MEMASTIKAN KOLOM BARU ADA) ---
+            const alterTable = async (table, column, definition) => {
+                try {
+                    await conn.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+                    console.log(`[DB MIGRATION] Added column ${column} to ${table}`);
+                } catch (e) { /* Column likely exists */ }
+            };
+
+            // Migrasi untuk kelola_program
+            await alterTable('kelola_program', 'impactScore', 'INT DEFAULT 0');
+            await alterTable('kelola_program', 'tags', 'TEXT');
+            await alterTable('kelola_program', 'beneficiaries', 'TEXT');
+            await alterTable('kelola_program', 'image', 'TEXT');
+
+            // Migrasi untuk pengguna
+            await alterTable('pengguna', 'password', 'TEXT');
+            await alterTable('pengguna', 'instansi', 'TEXT');
+            await alterTable('pengguna', 'emailDinas', 'TEXT');
+
             // --- SEED SECTIONS ---
             const [regRows] = await conn.query('SELECT COUNT(*) as count FROM regulasi');
             if (regRows[0].count === 0) {
