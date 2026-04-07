@@ -38,12 +38,12 @@ jobs:
             mkdir -p /var/www/portal-csr/frontend
 
       - name: Copy Files to VPS
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "backend/*,frontend/dist/*"
+          source: "backend,frontend/dist"
           target: "/var/www/portal-csr"
 
       - name: Post-Deployment Steps
@@ -53,6 +53,10 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # Tampilkan struktur folder untuk debug jika error lagi
+            echo "--- Struktur Folder Final ---"
+            ls -R /var/www/portal-csr
+            
             cd /var/www/portal-csr/backend
             npm install --production
             
