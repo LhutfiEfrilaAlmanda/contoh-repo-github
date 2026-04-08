@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+const axios = require('axios'); // Tambahkan axios untuk Fonnte
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { pool, initDB } = require('./database.js');
 
@@ -147,6 +148,26 @@ const createNotification = async (message, type = 'info') => {
         console.log('[NOTIF]', message);
     } catch (err) { console.error('Failed to create notification:', err); }
 };
+
+// --- HELPER: KIRIM WHATSAPP VIA FONNTE ---
+async function sendWhatsapp(target, message) {
+    const token = process.env.FONNTE_TOKEN;
+    if (!token || !target) {
+        console.warn('[WA SKIP] Token atau Target kosong');
+        return;
+    }
+    try {
+        const response = await axios.post('https://api.fonnte.com/send', {
+            target: target,
+            message: message
+        }, {
+            headers: { 'Authorization': token }
+        });
+        console.log('[WA SENT]', target, response.data.status ? 'Success' : 'Failed');
+    } catch (err) {
+        console.error('[WA ERROR]', err.message);
+    }
+}
 
 /* ================================
    GET ENDPOINTS
@@ -930,7 +951,7 @@ app.put('/api/profile/password', async (req, res) => {
 
 // Submissions (CREATE)
 app.post('/api/submissions', async (req, res) => {
-    const { companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt } = req.body;
+    const { companyName, contactPerson, email, phone, programId, status, commitmentAmount, submittedAt } = req.body;
     try {
         // Logic pencarian ID otomatis yang lebih kuat untuk Submissions (s-)
         const [rows] = await pool.query('SELECT id FROM kontribusi_mitra_csr');
@@ -943,10 +964,27 @@ app.post('/api/submissions', async (req, res) => {
             }
         });
         const newId = `s-${maxNum + 1}`;
-        await pool.query(`INSERT INTO kontribusi_mitra_csr (id, companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [newId, companyName, contactPerson || '', email || '', programId || '', status || 'Pending', commitmentAmount || 0, submittedAt || new Date().toISOString()]);
+        await pool.query(`INSERT INTO kontribusi_mitra_csr (id, companyName, contactPerson, email, phone, programId, status, commitmentAmount, submittedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [newId, companyName, contactPerson || '', email || '', phone || '', programId || '', status || 'Pending', commitmentAmount || 0, submittedAt || new Date().toISOString()]);
+        
         await createNotification(`Pengajuan kontribusi baru dari ${companyName} telah diterima.`, 'info');
-        res.json({ success: true, id: newId, companyName, contactPerson, email, programId, status, commitmentAmount, submittedAt });
+        
+        // --- WHATSAPP NOTIF TO ADMIN ---
+        const adminWA = process.env.ADMIN_WA_NUMBER;
+        if (adminWA) {
+            const [prog] = await pool.query('SELECT title FROM kelola_program WHERE id = ?', [programId]);
+            const progTitle = prog[0]?.title || 'Program CSR';
+            const adminMsg = `📢 *PENGAJUAN CSR BARU*\n\nDari: *${companyName}*\nKontak: ${contactPerson}\nProgram: ${progTitle}\nNilai: Rp ${Number(commitmentAmount).toLocaleString('id-ID')}\n\nSilakan cek dashboard admin untuk verifikasi.`;
+            sendWhatsapp(adminWA, adminMsg);
+        }
+
+        // --- WHATSAPP NOTIF TO CLIENT ---
+        if (phone) {
+            const clientMsg = `Halo *${contactPerson}*,\n\nTerima kasih atas partisipasi perusahaan *${companyName}* dalam program CSR kami. Pengajuan Anda telah kami terima dan saat ini sedang dalam proses verifikasi.\n\nSimpan pesan ini sebagai bukti pendaftaran anda.`;
+            sendWhatsapp(phone, clientMsg);
+        }
+
+        res.json({ success: true, id: newId, companyName, contactPerson, email, phone, programId, status, commitmentAmount, submittedAt });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 
@@ -1007,8 +1045,20 @@ app.put('/api/submissions/:id', async (req, res) => {
     const { status } = req.body;
     console.log(`UPDATING SUBMISSION id=${req.params.id} to status=${status}`);
     try {
+        // Ambil data submission dulu untuk butuh nomor WA & nama perusahaan
+        const [subs] = await pool.query('SELECT * FROM kontribusi_mitra_csr WHERE id = ?', [req.params.id]);
+        if (subs.length === 0) return res.status(404).json({ error: 'Noot found' });
+        const sub = subs[0];
+
         await pool.query(`UPDATE kontribusi_mitra_csr SET status=? WHERE id=?`, [status, req.params.id]);
         await createNotification(`Status pengajuan ${req.params.id} diubah menjadi: ${status}`, 'info');
+
+        // --- WHATSAPP NOTIF ON APPROVAL ---
+        if ((status === 'Terealisasi' || status === 'Approved') && sub.phone) {
+            const approvalMsg = `🎊 *SELAMAT! KONTRIBUSI DISETUJUI*\n\nYth. *${sub.contactPerson}*,\nKami informasikan bahwa ajuan CSR dari *${sub.companyName}* telah disetujui dan berstatus *TEREALISASI*.\n\nTerima kasih atas kontribusi nyata Perusahaan Anda bagi pembangunan daerah.`;
+            sendWhatsapp(sub.phone, approvalMsg);
+        }
+
         res.json({ success: true });
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });

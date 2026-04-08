@@ -42,6 +42,7 @@ function ProgramModal({ program, onClose }) {
             companyName: fd.get('companyName'),
             contactPerson: fd.get('contactPerson'),
             email: fd.get('email'),
+            phone: fd.get('phone'), // Tambahkan nomor HP
             programId: program.id,
             status: 'Pending',
             commitmentAmount: Number(amount) || 0,
@@ -110,6 +111,7 @@ function ProgramModal({ program, onClose }) {
                                     </select>
                                     <input required type="text" name="contactPerson" placeholder="Nama Kontak Person" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none font-medium" />
                                     <input required type="email" name="email" placeholder="Email Bisnis" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none font-medium" />
+                                    <input required type="text" name="phone" placeholder="Nomor WhatsApp (Contoh: 08123456789)" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none font-medium md:col-span-2" />
                                     <div className="md:col-span-2 relative">
                                         <span className={`absolute left-5 top-4 font-black transition-colors ${isOverBudget ? 'text-rose-500' : 'text-slate-400'}`}>Rp</span>
                                         <input 

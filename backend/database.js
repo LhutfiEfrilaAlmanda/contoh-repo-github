@@ -197,6 +197,9 @@ async function initDB() {
             await alterTable('pengguna', 'instansi', 'TEXT');
             await alterTable('pengguna', 'emailDinas', 'TEXT');
 
+            // Migrasi untuk kontribusi_mitra_csr
+            await alterTable('kontribusi_mitra_csr', 'phone', 'VARCHAR(50)');
+
             // --- SEED SECTIONS ---
             const [regRows] = await conn.query('SELECT COUNT(*) as count FROM regulasi');
             if (regRows[0].count === 0) {
