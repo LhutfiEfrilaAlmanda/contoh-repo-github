@@ -784,15 +784,30 @@ app.put('/api/regulations/:id', uploadReg.single('file'), async (req, res) => {
 app.post('/api/users', async (req, res) => {
     const { name, email, role, lastLogin } = req.body;
     try {
-        const [existing] = await pool.query('SELECT id FROM pengguna ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
-        let nextNum = 1;
-        if (existing.length > 0) { const m = existing[0].id.match(/u-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
-        const newId = `u-${nextNum}`;
-        await pool.query(`INSERT INTO pengguna (id, name, email, role, lastLogin) VALUES (?, ?, ?, ?, ?)`,
-            [newId, name, email, role || 'Viewer', lastLogin || new Date().toISOString()]);
+        // Logik pencarian ID otomatis yang lebih kuat (u-)
+        const [rows] = await pool.query('SELECT id FROM pengguna');
+        let maxNum = 0;
+        rows.forEach(row => {
+            const match = row.id.match(/u-(\d+)/);
+            if (match) {
+                const num = parseInt(match[1]);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        const newId = `u-${maxNum + 1}`;
+        
+        // Pastikan kolom password diisi (default: admin123)
+        const defaultPw = 'admin123';
+        
+        await pool.query(`INSERT INTO pengguna (id, name, email, role, password, lastLogin) VALUES (?, ?, ?, ?, ?, ?)`,
+            [newId, name, email, role || 'Viewer', defaultPw, lastLogin || new Date().toISOString()]);
+        
         await createNotification(`Pengguna baru terdaftar: ${name} (${role})`, 'success');
         res.json({ success: true, id: newId, name, email, role, lastLogin });
-    } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        console.error('USER CREATE ERROR:', err); 
+        res.status(500).json({ error: 'Gagal menyimpan: ' + err.message }); 
+    }
 });
 app.put('/api/users/:id', async (req, res) => {
     const { name, email, role, lastLogin } = req.body;
