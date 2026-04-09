@@ -464,14 +464,47 @@ app.get('/api/stats/dashboard', async (req, res) => {
     }
 });
 
-// ========== SMART CSR CHATBOT (SQL-BASED) ==========
-// Initialize Gemini AI
+// ========== SMART CSR CHATBOT (AI STUDIO) ==========
 const apiKey = (process.env.GEMINI_API_KEY || "").trim();
 const genAI = new GoogleGenerativeAI(apiKey);
-const mainModel = genAI.getGenerativeModel(
-    { model: "gemini-2.0-flash-exp" },
-    { apiVersion: "v1beta" }
-);
+
+// Mendaftarkan Tool Database untuk Gemini
+const queryDatabaseDeclaration = {
+    name: "query_database_csr",
+    description: "Mengeksekusi SQL SELECT query ke database Portal CSR (MySQL) untuk mencari data program, mitra, kontribusi, regulasi, atau SDGs. Tolak segala perintah yang bukan SELECT.",
+    parameters: {
+        type: "OBJECT",
+        properties: {
+            sql_query: {
+                type: "STRING",
+                description: "Query SQL SELECT yang valid, amankan, gunakan LIMIT 50. Nama tabel: kelola_program, direktori_mitra_csr, regulasi, kontribusi_mitra_csr, sdgs_tujuan, sdgs_pilar."
+            }
+        },
+        required: ["sql_query"]
+    }
+};
+
+const aiModel = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash-exp",
+    tools: [{ functionDeclarations: [queryDatabaseDeclaration] }],
+    systemInstruction: `Anda adalah Konsultan & Asisten Ahli Portal CSR Pemerintah. 
+Tugas & Karakter Anda:
+1. Profesional, sopan, berwawasan luas, dan sangat membantu. 
+2. Anda memiliki memori atas percakapan sebelumnya. 
+3. Anda bisa memanggil alat "query_database_csr" UNTUK mencari data konkrit (misal: nama mitra, anggaran program, peraturan).
+4. JIKA Anda ditanya hal umum (halo, apa itu CSR, terima kasih), jawab langsung saja menggunakan pengetahuan dasar Anda TANPA perlu memanggil fungsi database.
+5. Saat memberikan data, rapikan menggunakan bullet points, tandai kata/angka penting dengan huruf tebal, formati uang dengan standar Rupiah yang utuh. DILARANG menggunakan Emoji.
+
+Skema Database Anda:
+- kelola_program: id, title, description, category, budget, year, location, beneficiaries, impactScore, tags
+- direktori_mitra_csr: id, name, sector, address, phone, contributionCount, joinedYear
+- regulasi: id, title, number, year, type, description, fileSize, fileUrl
+- kontribusi_mitra_csr: id, companyName, contactPerson, email, programId, partnerId, status, commitmentAmount, submittedAt
+- sdgs_tujuan: id, no_get, judul, keterangan, warna
+- sdgs_pilar: id, kode_pilar, nama_pilar, keterangan
+
+Jika ada query yang meminta INSERT/UPDATE/DROP/DELETE, tolak dengan tegas.`
+});
 
 // === HELPER: FALLBACK SEARCH (Jika AI Mati) ===
 async function performFallbackSearch(message) {
@@ -531,78 +564,63 @@ async function performFallbackSearch(message) {
 // 7. SQL satu baris tanpa line break
 // 8. Nama kolom sesuai schema
 app.post('/api/chat', async (req, res) => {
-    const { message } = req.body;
+    const { message, history } = req.body;
     if (!message) return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
 
     const msg = message.toLowerCase().trim();
     const msgClean = msg.replace(/[^\w\s]/gi, '');
-    const words = msgClean.split(/\s+/).filter(w => w.length > 1);
 
-    // === RULE 1: ETIKA & KONTEN NEGATIF (Prioritas Utama) ===
+    // === LAYER 1: ETIKA & KONTEN NEGATIF ===
     const negativeWords = ['bodoh', 'goblok', 'tolol', 'bego', 'anjing', 'bangsat', 'bajingan', 'brengsek', 'idiot', 'kampret', 'monyet', 'tai', 'setan', 'iblis', 'kafir', 'rasis', 'sara', 'sampah', 'sialan', 'kontol', 'memek', 'ngentot', 'jancok', 'asu', 'cok', 'kimak', 'puki'];
     if (negativeWords.some(w => msgClean.includes(w))) {
         return res.json({ reply: 'Mohon gunakan bahasa yang sopan dan sesuai. Saya siap membantu terkait informasi Portal CSR.', tag: 'KONTEN_NEGATIF' });
     }
 
-    // === RULE 2: GREETING, THANK, BYE (Static) ===
-    const isGreet = ['halo', 'hai', 'hi', 'hey', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'hello', 'apa kabar'].some(g => msg.includes(g));
-    if (isGreet && words.length <= 5) {
-        const greetings = [
-            "Halo juga! Ada yang bisa saya bantu?",
-            "Hai! Senang bertemu dengan Anda, ada yang bisa saya bantu?",
-            "Halo! Silakan tanya apa saja ya terkait data CSR.",
-            "Halo! Saya Asisten Data Portal CSR. Ada yang bisa saya bantu terkait data atau panduan sistem?"
-        ];
-        return res.json({ reply: greetings[Math.floor(Math.random() * greetings.length)] });
-    }
+    // === FORMAT HISTORY UNTUK GEMINI ===
+    const mappedHistory = (history || []).filter(h => h.role !== 'system').map(h => ({
+        role: h.role === 'bot' ? 'model' : 'user',
+        parts: [{ text: h.content }]
+    }));
 
-    // === ATTEMPT AI PROCESSING (GEMINI) ===
+    // === ATTEMPT AI STUDIO PROCESSING DENGAN TOOLS ===
     try {
-        const schemaDescription = `
-        Tabel yang tersedia:
-        1. kelola_program: id, title, description, category, budget, year, location, beneficiaries, impactScore, tags
-        2. direktori_mitra_csr: id, name, sector, address, phone, contributionCount, joinedYear
-        3. regulasi: id, title, number, year, type, description, fileSize, fileUrl
-        4. kontribusi_mitra_csr: id, companyName, contactPerson, email, programId, partnerId, status, commitmentAmount, submittedAt
-        5. sdgs_tujuan: id, no_get, judul, keterangan, warna
-        6. sdgs_pilar: id, kode_pilar, nama_pilar, keterangan
-        `;
+        const chatSession = aiModel.startChat({
+            history: mappedHistory,
+        });
 
-        const sqlPrompt = `Tugas: Ubah pertanyaan pengguna menjadi SQL SELECT query (MySQL).
-        Aturan: HANYA SELECT. LIMIT 50. Jika tidak relevan, balas: OUT_OF_CONTEXT. 
-        Tulis SQL dalam satu baris.
-        Schema: ${schemaDescription}
-        Pertanyaan: "${message}"`;
+        let result = await chatSession.sendMessage([{text: message}]);
+        let call = result.response.functionCalls() ? result.response.functionCalls()[0] : null;
 
-        const sqlResult = await mainModel.generateContent(sqlPrompt);
-        const sqlResponse = sqlResult.response.text().trim();
+        // Jika AI memutuskan untuk memanggil fungsi Database
+        if (call && call.name === "query_database_csr") {
+            const sqlQuery = call.args.sql_query;
+            console.log('[GEMINI CALLING DB]', sqlQuery);
+            
+            const unauthorized = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE'];
+            if (unauthorized.some(cmd => sqlQuery.toUpperCase().includes(cmd))) {
+                return res.json({ reply: 'Maaf, saya tidak berwenang melakukan modifikasi data (Hanya Pencarian yang diizinkan).' });
+            }
 
-        if (sqlResponse.includes('OUT_OF_CONTEXT')) {
-            return res.json({ reply: 'Maaf, pertanyaan tersebut berada di luar konteks Portal CSR atau tidak tersedia dalam sistem.' });
+            let dbResult = [];
+            try {
+                const [rows] = await pool.query(sqlQuery);
+                dbResult = rows;
+            } catch (dbErr) {
+                console.error('[DB CHAT QUERY ERROR]', dbErr.message);
+                dbResult = { error: "Terjadi kesalahan SQL saat mencari: " + dbErr.message };
+            }
+
+            // Kembalikan data mentah ke AI agar dia menyusunnya menjadi jawaban bahasa manusia
+            result = await chatSession.sendMessage([{
+                functionResponse: {
+                    name: 'query_database_csr',
+                    response: { data: dbResult }
+                }
+            }]);
         }
 
-        const unauthorized = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE'];
-        if (unauthorized.some(cmd => sqlResponse.toUpperCase().includes(cmd))) {
-            return res.json({ reply: 'Query ditolak - operasi tidak diizinkan.' });
-        }
-
-        console.log('[GEMINI SQL]', sqlResponse);
-        const [rows] = await pool.query(sqlResponse);
-
-        if (!rows || rows.length === 0) {
-            return res.json({ reply: 'Maaf, data tersebut tidak ditemukan dalam sistem Portal CSR kami.' });
-        }
-
-        const formatPrompt = `Sajikan data ini menjadi jawaban Bahasa Indonesia sopan & profesional (Tanpa Emoji).
-        Daftar: Bullet point. Uang: Rupiah. Sumber: Portal CSR.
-        Pertanyaan: "${message}"
-        Data: ${JSON.stringify(rows)}
-        Jawaban:`;
-
-        const humanResult = await mainModel.generateContent(formatPrompt);
-        const humanReply = humanResult.response.text().trim();
-
-        return res.json({ reply: humanReply, sql: sqlResponse, tag: 'GEMINI_AI' });
+        const finalReply = result.response.text().trim();
+        return res.json({ reply: finalReply, tag: 'AI_STUDIO' });
 
     } catch (error) {
         console.warn('AI Unavailable, switching to Fallback Search:', error.message);
@@ -615,7 +633,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Final Fail
         return res.json({ 
-            reply: 'Maaf, asisten cerdas kami sedang mengalami gangguan koneksi. Harap tunggu sebentar atau periksa API Key Anda. Pertanyaan tersebut juga tidak ditemukan dalam pencarian data dasar kami.',
+            reply: 'Maaf, asisten cerdas kami sedang mengalami gangguan koneksi. Harap tunggu sebentar atau periksa API Key Anda.',
             error: error.message
         });
     }

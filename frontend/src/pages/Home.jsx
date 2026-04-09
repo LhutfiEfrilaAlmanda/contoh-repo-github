@@ -218,6 +218,7 @@ const Home = () => {
         try {
             const res = await api.post('chat', {
                 message: userInput,
+                history: chatMessages, // Mengikutsertakan context percakapan sebelumnya
                 contextProgramId: lastProgramId
             });
             setChatMessages(prev => [...prev, { role: 'bot', content: res.data.reply }]);
