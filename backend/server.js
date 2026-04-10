@@ -485,7 +485,7 @@ const queryDatabaseDeclaration = {
 };
 
 const aiModel = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     tools: [{ functionDeclarations: [queryDatabaseDeclaration] }],
     systemInstruction: `Anda adalah Konsultan & Asisten Ahli Portal CSR Pemerintah. 
 Tugas & Karakter Anda:
