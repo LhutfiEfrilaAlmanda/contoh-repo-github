@@ -485,7 +485,7 @@ const queryDatabaseDeclaration = {
 };
 
 const aiModel = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-2.0-flash",
     tools: [{ functionDeclarations: [queryDatabaseDeclaration] }],
     systemInstruction: `Anda adalah Konsultan & Asisten Ahli Portal CSR Pemerintah. 
 Tugas & Karakter Anda:
@@ -497,7 +497,7 @@ Tugas & Karakter Anda:
 
 Skema Database Anda:
 - kelola_program: id, title, description, category, budget, year, location, beneficiaries, impactScore, tags
-- direktori_mitra_csr: id, name, sector, address, phone, contributionCount, joinedYear
+- direktori_mitra_csr: id, companyName, logo, sector, address, phone, contributionCount, joinedYear
 - regulasi: id, title, number, year, type, description, fileSize, fileUrl
 - kontribusi_mitra_csr: id, companyName, contactPerson, email, programId, partnerId, status, commitmentAmount, submittedAt
 - sdgs_tujuan: id, no_get, judul, keterangan, warna
@@ -523,8 +523,8 @@ async function performFallbackSearch(message) {
         const [programs] = await pool.query(programQuery);
         
         // 2. Cari Mitra
-        let partnerQuery = "SELECT name, sector, joinedYear FROM direktori_mitra_csr WHERE ";
-        partnerQuery += words.map(w => `(name LIKE '%${w}%' OR sector LIKE '%${w}%')`).join(' OR ');
+        let partnerQuery = "SELECT companyName, sector, joinedYear FROM direktori_mitra_csr WHERE ";
+        partnerQuery += words.map(w => `(companyName LIKE '%${w}%' OR sector LIKE '%${w}%')`).join(' OR ');
         partnerQuery += " LIMIT 5";
         
         const [partners] = await pool.query(partnerQuery);
@@ -543,7 +543,7 @@ async function performFallbackSearch(message) {
         if (partners.length > 0) {
             response += "\n MITRA TERKAIT:\n";
             partners.forEach(m => {
-                response += `- ${m.name} (Sektor: ${m.sector})\n`;
+                response += `- ${m.companyName} (Sektor: ${m.sector})\n`;
             });
         }
         
