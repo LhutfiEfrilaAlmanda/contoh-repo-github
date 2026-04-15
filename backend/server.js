@@ -463,24 +463,24 @@ app.get('/api/sdgs-indikators', async (req, res) => {
 });
 
 app.post('/api/sdgs-indikators', async (req, res) => {
-    const { target_id, kode_indikator, deskripsi } = req.body;
+    const { target_id, kode_indikator, deskripsi, keterangan } = req.body;
     try {
         const [existing] = await pool.query('SELECT id FROM sdgs_indikator ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
         let nextNum = 1;
         if (existing.length > 0) { const m = existing[0].id.match(/ind-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
         const newId = `ind-${nextNum}`;
-        await pool.query('INSERT INTO sdgs_indikator (id, target_id, kode_indikator, deskripsi) VALUES (?, ?, ?, ?)',
-            [newId, target_id, kode_indikator, deskripsi || '']);
+        await pool.query('INSERT INTO sdgs_indikator (id, target_id, kode_indikator, deskripsi, keterangan) VALUES (?, ?, ?, ?, ?)',
+            [newId, target_id, kode_indikator, deskripsi || '', keterangan || '']);
         await createNotification(`Indikator SDGs baru ditambahkan: ${kode_indikator}`, 'success');
         res.json({ success: true, id: newId });
     } catch (err) { console.error('SDGs Indikator POST ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/sdgs-indikators/:id', async (req, res) => {
-    const { target_id, kode_indikator, deskripsi } = req.body;
+    const { target_id, kode_indikator, deskripsi, keterangan } = req.body;
     try {
-        await pool.query('UPDATE sdgs_indikator SET target_id=?, kode_indikator=?, deskripsi=? WHERE id=?',
-            [target_id, kode_indikator, deskripsi || '', req.params.id]);
+        await pool.query('UPDATE sdgs_indikator SET target_id=?, kode_indikator=?, deskripsi=?, keterangan=? WHERE id=?',
+            [target_id, kode_indikator, deskripsi || '', keterangan || '', req.params.id]);
         await createNotification(`Indikator SDGs "${kode_indikator}" telah diperbarui.`, 'info');
         res.json({ success: true });
     } catch (err) { console.error('SDGs Indikator PUT ERROR:', err); res.status(500).json({ error: err.message }); }

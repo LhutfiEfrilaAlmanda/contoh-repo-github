@@ -212,6 +212,7 @@ async function initDB() {
             await alterTable('pengguna', 'password', 'TEXT');
             await alterTable('pengguna', 'instansi', 'TEXT');
             await alterTable('pengguna', 'emailDinas', 'TEXT');
+            await alterTable('sdgs_indikator', 'keterangan', 'TEXT');
 
             // Migrasi untuk kontribusi_mitra_csr
             await alterTable('kontribusi_mitra_csr', 'phone', 'VARCHAR(50)');
@@ -315,12 +316,31 @@ async function initDB() {
                     ['tgt-3', 'sdg-2', '2.2', 'Pada tahun 2030, menghilangkan segala bentuk kekurangan gizi, termasuk pada tahun 2025 mencapai target yang disepakati secara internasional untuk penurunan stunting dan wasting pada balita, dan mengatasi kebutuhan gizi remaja perempuan, ibu hamil dan menyusui serta lansia.'],
                     ['tgt-4', 'sdg-3', '3.1', 'Pada tahun 2030, mengurangi rasio angka kematian ibu hingga kurang dari 70 per 100.000 kelahiran hidup.'],
                     ['tgt-5', 'sdg-3', '3.2', 'Pada tahun 2030, mengakhiri kematian bayi baru lahir dan balita yang dapat dicegah, dengan seluruh negara berusaha menurunkan angka kematian neonatal setidaknya hingga setingkat 12 per 1.000 kelahiran hidup dan angka kematian balita setidaknya hingga setingkat 25 per 1.000 kelahiran hidup.'],
-                    ['tgt-6', 'sdg-4', '4.2', 'Pada tahun 2030, menjamin bahwa semua anak perempuan dan laki-laki memiliki akses terhadap perkembangan, pengasuhan, dan pendidikan anak usia dini yang berkualitas sehingga mereka siap untuk memasuki pendidikan dasar.']
+                    ['tgt-6', 'sdg-4', '4.2', 'Pada tahun 2030, menjamin bahwa semua anak perempuan dan laki-laki memiliki akses terhadap perkembangan, pengasuhan, dan pendidikan anak usia dini yang berkualitas sehingga mereka siap untuk memasuki pendidikan dasar.'],
+                    ['tgt-7', 'sdg-1', '1.3', 'Implementasikan secara nasional sistem dan langkah perlindungan sosial yang tepat bagi semua, termasuk cakupannya, dan pada tahun 2030 mencapai cakupan substansial bagi kelompok miskin dan rentan.'],
+                    ['tgt-8', 'sdg-1', '1.4', 'Pada tahun 2030, menjamin bahwa seluruh laki-laki dan perempuan, khususnya masyarakat miskin dan rentan, memiliki hak yang sama terhadap sumber daya ekonomi, serta akses terhadap pelayanan dasar, kepemilikan dan kontrol atas tanah dan bentuk kepemilikan lain, warisan, sumber daya alam, teknologi baru yang sesuai dan jasa keuangan, termasuk keuangan mikro.']
                 ];
                 for (const t of initTargets) {
                     await conn.query('INSERT IGNORE INTO sdgs_target (id, sdg_id, kode_target, deskripsi) VALUES (?, ?, ?, ?)', t);
                 }
                 console.log('[SEED] Data Target SDGs berhasil ditambahkan.');
+            }
+
+            // SEED SDGS_INDIKATOR
+            const [indikatorRows] = await conn.query('SELECT COUNT(*) as count FROM sdgs_indikator');
+            if (indikatorRows[0].count === 0) {
+                const initIndikators = [
+                    ['ind-1', 'tgt-8', '1.4.1.(a)', 'Persentase perempuan pernah kawin umur 15-49 tahun yang proses melahirkan terakhirnya dibantu oleh tenaga kesehatan terlatih', 'Indikator nasional sebagai proksi indikator global'],
+                    ['ind-2', 'tgt-7', '1.3.1.(d)', 'Jumlah rumah tangga yang mendapatkan bantuan pangan non-tunai (BPNT)', 'Indikator nasional sebagai tambahan indikator nasional'],
+                    ['ind-3', 'tgt-8', '1.4.1', 'Proporsi penduduk/rumah tangga dengan akses terhadap pelayanan dasar', 'Indikator global yang memiliki proksi dan data'],
+                    ['ind-4', 'tgt-7', '1.3.1.(b)', 'Proporsi peserta Program Jaminan Sosial Bidang Ketenagakerjaan', 'Indikator nasional sebagai proksi indikator global'],
+                    ['ind-5', 'tgt-7', '1.3.1', 'Proporsi penduduk yang menerima program jaminan sosial, menurut jenis kelamin, kelompok usia', 'Indikator global yang memiliki proksi dan data'],
+                    ['ind-6', 'tgt-7', '1.3.1.(a)', 'Proporsi peserta jaminan kesehatan melalui SJSN', 'Indikator nasional sebagai proksi indikator global']
+                ];
+                for (const i of initIndikators) {
+                    await conn.query('INSERT IGNORE INTO sdgs_indikator (id, target_id, kode_indikator, deskripsi, keterangan) VALUES (?, ?, ?, ?, ?)', i);
+                }
+                console.log('[SEED] Data Indikator SDGs berhasil ditambahkan.');
             }
 
             // SEED KELOLA_PROGRAM (Data Programs)

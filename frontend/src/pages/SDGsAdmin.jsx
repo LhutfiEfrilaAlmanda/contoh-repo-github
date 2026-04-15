@@ -372,7 +372,7 @@ function IndikatorTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editItem, setEditItem] = useState(null);
-    const [formData, setFormData] = useState({ target_id: '', kode_indikator: '', deskripsi: '' });
+    const [formData, setFormData] = useState({ target_id: '', kode_indikator: '', deskripsi: '', keterangan: '' });
 
     useEffect(() => { fetchData(); }, []);
 
@@ -400,7 +400,7 @@ function IndikatorTab() {
                 await api.post('/sdgs-indikators', formData);
             }
             setShowModal(false); setEditItem(null);
-            setFormData({ target_id: '', kode_indikator: '', deskripsi: '' });
+            setFormData({ target_id: '', kode_indikator: '', deskripsi: '', keterangan: '' });
             fetchData();
             alert('Indikator SDGs berhasil disimpan!');
         } catch (err) { console.error(err); alert('Gagal menyimpan.'); }
@@ -408,7 +408,12 @@ function IndikatorTab() {
 
     const handleEdit = (item) => {
         setEditItem(item);
-        setFormData({ target_id: item.target_id, kode_indikator: item.kode_indikator, deskripsi: item.deskripsi });
+        setFormData({ 
+            target_id: item.target_id, 
+            kode_indikator: item.kode_indikator, 
+            deskripsi: item.deskripsi,
+            keterangan: item.keterangan || ''
+        });
         setShowModal(true);
     };
 
@@ -420,7 +425,7 @@ function IndikatorTab() {
 
     const openAdd = () => {
         setEditItem(null);
-        setFormData({ target_id: targets[0]?.id || '', kode_indikator: '', deskripsi: '' });
+        setFormData({ target_id: targets[0]?.id || '', kode_indikator: '', deskripsi: '', keterangan: '' });
         setShowModal(true);
     };
 
@@ -441,10 +446,10 @@ function IndikatorTab() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                <th className="px-5 py-4 font-black" style={{width:'12%'}}>Kode</th>
-                                <th className="px-5 py-4 font-black" style={{width:'15%'}}>Target</th>
-                                <th className="px-5 py-4 font-black" style={{width:'18%'}}>Tujuan SDGs</th>
-                                <th className="px-5 py-4 font-black" style={{width:'40%'}}>Deskripsi Indikator</th>
+                                <th className="px-5 py-4 font-black" style={{width:'10%'}}>No. Target</th>
+                                <th className="px-5 py-4 font-black" style={{width:'15%'}}>No.</th>
+                                <th className="px-5 py-4 font-black" style={{width:'30%'}}>Nama indikator</th>
+                                <th className="px-5 py-4 font-black" style={{width:'30%'}}>Keterangan</th>
                                 <th className="px-5 py-4 font-black text-center" style={{width:'15%'}}>Aksi</th>
                             </tr>
                         </thead>
@@ -456,14 +461,14 @@ function IndikatorTab() {
                             ) : (
                                 filtered.map(ind => (
                                     <tr key={ind.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-5 py-4"><span className="inline-block px-3 py-1 bg-violet-50 text-violet-700 rounded-lg text-xs font-black">{ind.kode_indikator}</span></td>
-                                        <td className="px-5 py-4"><span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold">{ind.kode_target}</span></td>
-                                        <td className="px-5 py-4"><span className="text-sm font-bold text-slate-700">{ind.sdg_no ? `${ind.sdg_no}. ${ind.sdg_judul}` : '-'}</span></td>
+                                        <td className="px-5 py-4"><span className="text-sm font-medium text-slate-600">{ind.kode_target}</span></td>
+                                        <td className="px-5 py-4"><span className="text-sm font-bold text-slate-700">{ind.kode_indikator}</span></td>
                                         <td className="px-5 py-4"><span className="text-sm text-slate-500 font-medium line-clamp-2">{ind.deskripsi}</span></td>
+                                        <td className="px-5 py-4"><span className="text-sm text-slate-400 italic line-clamp-2">{ind.keterangan || '-'}</span></td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(ind)} className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(ind.id)} className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                                <button onClick={() => handleEdit(ind)} className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors" title="Ubah"><Edit3 className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(ind.id)} className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -494,11 +499,15 @@ function IndikatorTab() {
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Kode Indikator</label>
-                                <input value={formData.kode_indikator} onChange={(e) => setFormData({...formData, kode_indikator: e.target.value})} placeholder="1.1.1" required className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all" />
+                                <input value={formData.kode_indikator} onChange={(e) => setFormData({...formData, kode_indikator: e.target.value})} placeholder="1.4.1.(a)" required className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all" />
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Deskripsi</label>
-                                <textarea value={formData.deskripsi} onChange={(e) => setFormData({...formData, deskripsi: e.target.value})} placeholder="Deskripsi indikator..." rows={3} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all resize-none" />
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Nama Indikator</label>
+                                <textarea value={formData.deskripsi} onChange={(e) => setFormData({...formData, deskripsi: e.target.value})} placeholder="Nama indikator..." rows={2} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all resize-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Keterangan</label>
+                                <textarea value={formData.keterangan} onChange={(e) => setFormData({...formData, keterangan: e.target.value})} placeholder="Keterangan tambahan..." rows={2} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all resize-none" />
                             </div>
                             <div className="flex items-center justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">Batal</button>
