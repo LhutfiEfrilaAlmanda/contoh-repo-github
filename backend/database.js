@@ -169,6 +169,22 @@ async function initDB() {
                 sdg_id VARCHAR(191)
             )`);
 
+            // SDGS_TARGET
+            await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_target (
+                id VARCHAR(191) PRIMARY KEY,
+                sdg_id VARCHAR(191),
+                kode_target TEXT,
+                deskripsi TEXT
+            )`);
+
+            // SDGS_INDIKATOR
+            await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_indikator (
+                id VARCHAR(191) PRIMARY KEY,
+                target_id VARCHAR(191),
+                kode_indikator TEXT,
+                deskripsi TEXT
+            )`);
+
             // NOTIFIKASI (BARU)
             await conn.query(`CREATE TABLE IF NOT EXISTS notifikasi (
                 id VARCHAR(191) PRIMARY KEY,

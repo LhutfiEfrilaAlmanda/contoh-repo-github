@@ -401,6 +401,99 @@ app.get('/api/pillars', async (req, res) => {
     }
 });
 
+// ========== TARGET SDGs CRUD ==========
+app.get('/api/sdgs-targets', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT t.*, s.no_get as sdg_no, s.judul as sdg_judul
+            FROM sdgs_target t
+            LEFT JOIN sdgs_tujuan s ON t.sdg_id = s.id
+            ORDER BY s.no_get ASC, t.kode_target ASC
+        `);
+        res.json(rows);
+    } catch (err) { console.error('SDGs Target GET ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/sdgs-targets', async (req, res) => {
+    const { sdg_id, kode_target, deskripsi } = req.body;
+    try {
+        const [existing] = await pool.query('SELECT id FROM sdgs_target ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
+        let nextNum = 1;
+        if (existing.length > 0) { const m = existing[0].id.match(/tgt-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
+        const newId = `tgt-${nextNum}`;
+        await pool.query('INSERT INTO sdgs_target (id, sdg_id, kode_target, deskripsi) VALUES (?, ?, ?, ?)',
+            [newId, sdg_id, kode_target, deskripsi || '']);
+        await createNotification(`Target SDGs baru ditambahkan: ${kode_target}`, 'success');
+        res.json({ success: true, id: newId });
+    } catch (err) { console.error('SDGs Target POST ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/sdgs-targets/:id', async (req, res) => {
+    const { sdg_id, kode_target, deskripsi } = req.body;
+    try {
+        await pool.query('UPDATE sdgs_target SET sdg_id=?, kode_target=?, deskripsi=? WHERE id=?',
+            [sdg_id, kode_target, deskripsi || '', req.params.id]);
+        await createNotification(`Target SDGs "${kode_target}" telah diperbarui.`, 'info');
+        res.json({ success: true });
+    } catch (err) { console.error('SDGs Target PUT ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/sdgs-targets/:id', async (req, res) => {
+    try {
+        // Hapus indikator terkait dulu
+        await pool.query('DELETE FROM sdgs_indikator WHERE target_id = ?', [req.params.id]);
+        await pool.query('DELETE FROM sdgs_target WHERE id = ?', [req.params.id]);
+        await createNotification(`Target SDGs ID ${req.params.id} telah dihapus.`, 'warning');
+        res.json({ success: true });
+    } catch (err) { console.error('SDGs Target DELETE ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ========== INDIKATOR SDGs CRUD ==========
+app.get('/api/sdgs-indikators', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT i.*, t.kode_target, t.sdg_id, s.no_get as sdg_no, s.judul as sdg_judul
+            FROM sdgs_indikator i
+            LEFT JOIN sdgs_target t ON i.target_id = t.id
+            LEFT JOIN sdgs_tujuan s ON t.sdg_id = s.id
+            ORDER BY s.no_get ASC, t.kode_target ASC, i.kode_indikator ASC
+        `);
+        res.json(rows);
+    } catch (err) { console.error('SDGs Indikator GET ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/sdgs-indikators', async (req, res) => {
+    const { target_id, kode_indikator, deskripsi } = req.body;
+    try {
+        const [existing] = await pool.query('SELECT id FROM sdgs_indikator ORDER BY LENGTH(id) DESC, id DESC LIMIT 1');
+        let nextNum = 1;
+        if (existing.length > 0) { const m = existing[0].id.match(/ind-(\d+)/); if (m) nextNum = parseInt(m[1]) + 1; }
+        const newId = `ind-${nextNum}`;
+        await pool.query('INSERT INTO sdgs_indikator (id, target_id, kode_indikator, deskripsi) VALUES (?, ?, ?, ?)',
+            [newId, target_id, kode_indikator, deskripsi || '']);
+        await createNotification(`Indikator SDGs baru ditambahkan: ${kode_indikator}`, 'success');
+        res.json({ success: true, id: newId });
+    } catch (err) { console.error('SDGs Indikator POST ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/sdgs-indikators/:id', async (req, res) => {
+    const { target_id, kode_indikator, deskripsi } = req.body;
+    try {
+        await pool.query('UPDATE sdgs_indikator SET target_id=?, kode_indikator=?, deskripsi=? WHERE id=?',
+            [target_id, kode_indikator, deskripsi || '', req.params.id]);
+        await createNotification(`Indikator SDGs "${kode_indikator}" telah diperbarui.`, 'info');
+        res.json({ success: true });
+    } catch (err) { console.error('SDGs Indikator PUT ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/sdgs-indikators/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM sdgs_indikator WHERE id = ?', [req.params.id]);
+        await createNotification(`Indikator SDGs ID ${req.params.id} telah dihapus.`, 'warning');
+        res.json({ success: true });
+    } catch (err) { console.error('SDGs Indikator DELETE ERROR:', err); res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/org-profile', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM profil_organisasi LIMIT 1');
