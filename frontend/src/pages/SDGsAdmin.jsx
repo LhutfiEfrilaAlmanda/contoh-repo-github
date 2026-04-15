@@ -461,8 +461,8 @@ function IndikatorTab() {
                             ) : (
                                 filtered.map(ind => (
                                     <tr key={ind.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-5 py-4"><span className="text-sm font-medium text-slate-600">{ind.kode_target}</span></td>
-                                        <td className="px-5 py-4"><span className="text-sm font-bold text-slate-700">{ind.kode_indikator}</span></td>
+                                        <td className="px-5 py-4"><span className="text-sm font-black text-indigo-600">{ind.kode_target || '-'}</span></td>
+                                        <td className="px-5 py-4"><span className="text-sm font-black text-slate-800">{ind.kode_indikator}</span></td>
                                         <td className="px-5 py-4"><span className="text-sm text-slate-500 font-medium line-clamp-2">{ind.deskripsi}</span></td>
                                         <td className="px-5 py-4"><span className="text-sm text-slate-400 italic line-clamp-2">{ind.keterangan || '-'}</span></td>
                                         <td className="px-5 py-4">

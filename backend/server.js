@@ -456,7 +456,10 @@ app.get('/api/sdgs-indikators', async (req, res) => {
             FROM sdgs_indikator i
             LEFT JOIN sdgs_target t ON i.target_id = t.id
             LEFT JOIN sdgs_tujuan s ON t.sdg_id = s.id
-            ORDER BY s.no_get ASC, t.kode_target ASC, i.kode_indikator ASC
+            ORDER BY 
+                s.no_get ASC, 
+                t.kode_target ASC,
+                i.kode_indikator ASC
         `);
         res.json(rows);
     } catch (err) { console.error('SDGs Indikator GET ERROR:', err); res.status(500).json({ error: err.message }); }
