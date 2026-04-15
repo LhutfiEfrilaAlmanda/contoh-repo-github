@@ -306,6 +306,23 @@ async function initDB() {
                 for (const m of mapping) { await conn.query('INSERT IGNORE INTO sdgs_pilar_mapping (id, pilar_id, sdg_id) VALUES (?, ?, ?)', m); }
             }
 
+            // SEED SDGS_TARGET
+            const [targetRows] = await conn.query('SELECT COUNT(*) as count FROM sdgs_target');
+            if (targetRows[0].count === 0) {
+                const initTargets = [
+                    ['tgt-1', 'sdg-5', '5.1', 'Mengakhiri segala bentuk diskriminasi terhadap kaum perempuan dan anak perempuan di mana saja.'],
+                    ['tgt-2', 'sdg-5', '5.2', 'Menghapuskan segala bentuk kekerasan terhadap kaum perempuan dan anak perempuan di ruang publik dan pribadi, termasuk perdagangan orang dan eksploitasi seksual serta jenis eksploitasi lainnya.'],
+                    ['tgt-3', 'sdg-2', '2.2', 'Pada tahun 2030, menghilangkan segala bentuk kekurangan gizi, termasuk pada tahun 2025 mencapai target yang disepakati secara internasional untuk penurunan stunting dan wasting pada balita, dan mengatasi kebutuhan gizi remaja perempuan, ibu hamil dan menyusui serta lansia.'],
+                    ['tgt-4', 'sdg-3', '3.1', 'Pada tahun 2030, mengurangi rasio angka kematian ibu hingga kurang dari 70 per 100.000 kelahiran hidup.'],
+                    ['tgt-5', 'sdg-3', '3.2', 'Pada tahun 2030, mengakhiri kematian bayi baru lahir dan balita yang dapat dicegah, dengan seluruh negara berusaha menurunkan angka kematian neonatal setidaknya hingga setingkat 12 per 1.000 kelahiran hidup dan angka kematian balita setidaknya hingga setingkat 25 per 1.000 kelahiran hidup.'],
+                    ['tgt-6', 'sdg-4', '4.2', 'Pada tahun 2030, menjamin bahwa semua anak perempuan dan laki-laki memiliki akses terhadap perkembangan, pengasuhan, dan pendidikan anak usia dini yang berkualitas sehingga mereka siap untuk memasuki pendidikan dasar.']
+                ];
+                for (const t of initTargets) {
+                    await conn.query('INSERT IGNORE INTO sdgs_target (id, sdg_id, kode_target, deskripsi) VALUES (?, ?, ?, ?)', t);
+                }
+                console.log('[SEED] Data Target SDGs berhasil ditambahkan.');
+            }
+
             // SEED KELOLA_PROGRAM (Data Programs)
             const [progRows] = await conn.query('SELECT COUNT(*) as count FROM kelola_program');
             if (progRows[0].count === 0) {
