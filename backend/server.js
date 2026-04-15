@@ -408,7 +408,12 @@ app.get('/api/sdgs-targets', async (req, res) => {
             SELECT t.*, s.no_get as sdg_no, s.judul as sdg_judul
             FROM sdgs_target t
             LEFT JOIN sdgs_tujuan s ON t.sdg_id = s.id
-            ORDER BY s.no_get ASC, t.kode_target ASC
+            ORDER BY 
+                s.no_get ASC, 
+                CAST(SUBSTRING_INDEX(t.kode_target, '.', 1) AS UNSIGNED) ASC,
+                IF(SUBSTRING_INDEX(t.kode_target, '.', -1) REGEXP '^[0-9]+$', 
+                   CAST(SUBSTRING_INDEX(t.kode_target, '.', -1) AS UNSIGNED), 
+                   SUBSTRING_INDEX(t.kode_target, '.', -1)) ASC
         `);
         res.json(rows);
     } catch (err) { console.error('SDGs Target GET ERROR:', err); res.status(500).json({ error: err.message }); }
@@ -458,7 +463,10 @@ app.get('/api/sdgs-indikators', async (req, res) => {
             LEFT JOIN sdgs_tujuan s ON t.sdg_id = s.id
             ORDER BY 
                 s.no_get ASC, 
-                t.kode_target ASC,
+                CAST(SUBSTRING_INDEX(t.kode_target, '.', 1) AS UNSIGNED) ASC,
+                IF(SUBSTRING_INDEX(t.kode_target, '.', -1) REGEXP '^[0-9]+$', 
+                   CAST(SUBSTRING_INDEX(t.kode_target, '.', -1) AS UNSIGNED), 
+                   SUBSTRING_INDEX(t.kode_target, '.', -1)) ASC,
                 i.kode_indikator ASC
         `);
         res.json(rows);

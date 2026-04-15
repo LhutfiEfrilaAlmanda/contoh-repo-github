@@ -318,7 +318,11 @@ async function initDB() {
                     ['tgt-5', 'sdg-3', '3.2', 'Pada tahun 2030, mengakhiri kematian bayi baru lahir dan balita yang dapat dicegah, dengan seluruh negara berusaha menurunkan angka kematian neonatal setidaknya hingga setingkat 12 per 1.000 kelahiran hidup dan angka kematian balita setidaknya hingga setingkat 25 per 1.000 kelahiran hidup.'],
                     ['tgt-6', 'sdg-4', '4.2', 'Pada tahun 2030, menjamin bahwa semua anak perempuan dan laki-laki memiliki akses terhadap perkembangan, pengasuhan, dan pendidikan anak usia dini yang berkualitas sehingga mereka siap untuk memasuki pendidikan dasar.'],
                     ['tgt-7', 'sdg-1', '1.3', 'Implementasikan secara nasional sistem dan langkah perlindungan sosial yang tepat bagi semua, termasuk cakupannya, dan pada tahun 2030 mencapai cakupan substansial bagi kelompok miskin dan rentan.'],
-                    ['tgt-8', 'sdg-1', '1.4', 'Pada tahun 2030, menjamin bahwa seluruh laki-laki dan perempuan, khususnya masyarakat miskin dan rentan, memiliki hak yang sama terhadap sumber daya ekonomi, serta akses terhadap pelayanan dasar, kepemilikan dan kontrol atas tanah dan bentuk kepemilikan lain, warisan, sumber daya alam, teknologi baru yang sesuai dan jasa keuangan, termasuk keuangan mikro.']
+                    ['tgt-8', 'sdg-1', '1.4', 'Pada tahun 2030, menjamin bahwa seluruh laki-laki dan perempuan, khususnya masyarakat miskin dan rentan, memiliki hak yang sama terhadap sumber daya ekonomi, serta akses terhadap pelayanan dasar, kepemilikan dan kontrol atas tanah dan bentuk kepemilikan lain, warisan, sumber daya alam, teknologi baru yang sesuai dan jasa keuangan, termasuk keuangan mikro.'],
+                    ['tgt-9', 'sdg-1', '1.2', 'Pada tahun 2030, mengurangi setidaknya setengah proporsi laki-laki, perempuan dan anak-anak dari semua usia yang hidup dalam kemiskinan dalam semua dimensi sesuai dengan definisi nasional.'],
+                    ['tgt-10', 'sdg-1', '1.5', 'Pada tahun 2030, membangun ketahanan masyarakat miskin dan mereka yang berada dalam kondisi rentan, dan mengurangi kerentanan mereka terhadap kejadian ekstrim terkait iklim dan guncangan ekonomi, sosial, lingkungan dan bencana lainnya.'],
+                    ['tgt-11', 'sdg-1', '1.a', 'Menjamin mobilisasi sumber daya yang signifikan dari berbagai sumber, termasuk melalui kerjasama pembangunan yang ditingkatkan, untuk menyediakan sarana yang memadai dan terprediksi bagi negara berkembang, khususnya negara kurang berkembang, untuk mengimplementasikan program dan kebijakan mengakhiri kemiskinan di semua dimensi.'],
+                    ['tgt-12', 'sdg-1', '1.b', 'Membuat kerangka kebijakan yang kuat di tingkat nasional, regional dan internasional, berdasarkan strategi pembangunan yang memihak pada kelompok miskin dan peka gender, untuk mendukung investasi yang dipercepat dalam tindakan pemberantasan kemiskinan.']
                 ];
                 for (const t of initTargets) {
                     await conn.query('INSERT IGNORE INTO sdgs_target (id, sdg_id, kode_target, deskripsi) VALUES (?, ?, ?, ?)', t);
@@ -342,6 +346,18 @@ async function initDB() {
                 }
                 console.log('[SEED] Data Indikator SDGs berhasil ditambahkan.');
             }
+
+            // MIGRASI PERBAIKAN: Hubungkan Indikator Yatim (tanpa target_id) ke Target yang Benar
+            await conn.query(`
+                UPDATE sdgs_indikator i
+                JOIN sdgs_target t ON (
+                    i.kode_indikator LIKE CONCAT(t.kode_target, '.%') OR 
+                    i.kode_indikator = t.kode_target
+                )
+                SET i.target_id = t.id
+                WHERE i.target_id IS NULL OR i.target_id = '' OR i.target_id NOT IN (SELECT id FROM sdgs_target)
+            `);
+            console.log('[MIGRATION] Orphan indicators linked to targets.');
 
             // SEED KELOLA_PROGRAM (Data Programs)
             const [progRows] = await conn.query('SELECT COUNT(*) as count FROM kelola_program');
