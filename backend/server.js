@@ -412,7 +412,6 @@ app.get('/api/sdgs-targets', async (req, res) => {
                 s.no_get ASC, 
                 t.kode_target ASC
         `);
-        `);
         res.json(rows);
     } catch (err) { console.error('SDGs Target GET ERROR:', err); res.status(500).json({ error: err.message }); }
 });
@@ -463,7 +462,6 @@ app.get('/api/sdgs-indikators', async (req, res) => {
                 s.no_get ASC, 
                 t.kode_target ASC,
                 i.kode_indikator ASC
-        `);
         `);
         res.json(rows);
     } catch (err) { console.error('SDGs Indikator GET ERROR:', err); res.status(500).json({ error: err.message }); }
