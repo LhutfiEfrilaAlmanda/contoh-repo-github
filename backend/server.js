@@ -1104,6 +1104,25 @@ app.post('/api/submissions', async (req, res) => {
     } catch (err) { console.error('API ERROR:', err); res.status(500).json({ error: err.message }); }
 });
 
+// Submissions (UPDATE Status & WA Notif)
+app.put('/api/submissions/:id', async (req, res) => {
+    const { status, companyName, contactPerson, phone, commitmentAmount, programId } = req.body;
+    try {
+        await pool.query(`UPDATE kontribusi_mitra_csr SET status = ? WHERE id = ?`, [status, req.params.id]);
+        
+        // --- WHATSAPP NOTIF ON VERIFICATION ---
+        if (phone && (status === 'Terealisasi' || status.toLowerCase() === 'approved')) {
+            const [prog] = await pool.query('SELECT title FROM kelola_program WHERE id = ?', [programId]);
+            const progTitle = prog[0]?.title || 'Program CSR';
+            const msg = `Halo *${contactPerson || 'Mitra'}*,\n\nKontribusi perusahaan *${companyName}* untuk program *${progTitle}* senilai *Rp ${Number(commitmentAmount).toLocaleString('id-ID')}* telah berhasil diverifikasi oleh Admin Portal CSR.\n\nTerima kasih atas partisipasi aktif Anda dalam pembangunan daerah.`;
+            sendWhatsapp(phone, msg);
+        }
+
+        await createNotification(`Status kontribusi ${companyName} diubah menjadi ${status}`, 'success');
+        res.json({ success: true });
+    } catch (err) { console.error('API ERROR UPDATE SUB:', err); res.status(500).json({ error: err.message }); }
+});
+
 // Reports (Laporan CSR)
 app.get('/api/reports', async (req, res) => {
     try {

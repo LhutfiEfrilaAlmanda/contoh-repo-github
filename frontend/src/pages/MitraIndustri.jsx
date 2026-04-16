@@ -97,9 +97,26 @@ export default function MitraIndustri() {
         try {
             const r = await api.post('submissions', item);
             setSubmissions(prev => [r.data, ...prev]);
+
+            // --- AUTO REGISTER MITRA JIKA BELUM ADA ---
+            const partnerExists = partners.some(p => (p.companyName || p.name) === item.companyName);
+            if (!partnerExists) {
+                const newPartner = {
+                    companyName: item.companyName,
+                    sector: 'Ditambahkan Manual',
+                    address: '-',
+                    phone: fd.get('phone') || '-',
+                    logo: '',
+                    joinedYear: new Date().getFullYear()
+                };
+                await api.post('partners', newPartner).then(res => {
+                    setPartners(prev => [...prev, res.data]);
+                });
+            }
+
             setShowSubForm(false);
             e.target.reset();
-            alert('Kontribusi berhasil dicatat!');
+            alert('Kontribusi berhasil dicatat dan diverifikasi!');
         } catch (err) {
             console.error(err);
             alert('Gagal mencatat kontribusi.');
@@ -288,11 +305,19 @@ export default function MitraIndustri() {
                             className="p-6 rounded-3xl mb-8 bg-indigo-50 border-2 border-indigo-100 animate-in slide-in-from-top duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih Mitra</label>
-                                    <select name="companyName" required className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium">
-                                        <option value="">-- Pilih Perusahaan --</option>
-                                        {partners.map(p => <option key={p.id} value={p.companyName || p.name}>{p.companyName || p.name}</option>)}
-                                    </select>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih / Ketik Mitra</label>
+                                    <input 
+                                        name="companyName" 
+                                        list="partner-list"
+                                        required 
+                                        placeholder="Ketik Nama Perusahaan..."
+                                        className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium" 
+                                    />
+                                    <datalist id="partner-list">
+                                        {partners.map(p => (
+                                            <option key={p.id} value={p.companyName || p.name} />
+                                        ))}
+                                    </datalist>
                                 </div>
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Pilih Program</label>
@@ -318,6 +343,11 @@ export default function MitraIndustri() {
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nama Kontak / Admin</label>
                                     <input name="contactPerson" defaultValue="Administrator" placeholder="Nama penginput"
                                         className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium" />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] font-black text-indigo-500 uppercase ml-1">Nomor WhatsApp Mitra</label>
+                                    <input name="phone" placeholder="Contoh: 0812345678"
+                                        className="bg-white border border-indigo-200 rounded-xl px-4 py-3 text-sm font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500" />
                                 </div>
                             </div>
                             <div className="flex gap-3 mt-6">
