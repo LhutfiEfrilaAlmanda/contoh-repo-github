@@ -1096,7 +1096,16 @@ app.post('/api/submissions', async (req, res) => {
 
         // --- WHATSAPP NOTIF TO CLIENT ---
         if (phone) {
-            const clientMsg = `Halo *${contactPerson}*,\n\nTerima kasih atas partisipasi perusahaan *${companyName}* dalam program CSR kami. Pengajuan Anda telah kami terima dan saat ini sedang dalam proses verifikasi.\n\nSimpan pesan ini sebagai bukti pendaftaran anda.`;
+            let clientMsg = '';
+            const isApproved = (status === 'Terealisasi' || (status || '').toLowerCase() === 'approved');
+            
+            if (isApproved) {
+                const [prog] = await pool.query('SELECT title FROM kelola_program WHERE id = ?', [programId]);
+                const progTitle = prog[0]?.title || 'Program CSR';
+                clientMsg = `Halo *${contactPerson || 'Mitra'}*,\n\nTerima kasih! Kontribusi perusahaan *${companyName}* untuk program *${progTitle}* senilai *Rp ${Number(commitmentAmount).toLocaleString('id-ID')}* telah berhasil diverifikasi dan tercatat dalam sistem Portal CSR.\n\nPartisipasi Anda sangat berarti bagi pembangunan daerah.`;
+            } else {
+                clientMsg = `Halo *${contactPerson}*,\n\nTerima kasih atas partisipasi perusahaan *${companyName}* dalam program CSR kami. Pengajuan Anda telah kami terima dan saat ini sedang dalam proses verifikasi.\n\nSimpan pesan ini sebagai bukti pendaftaran anda.`;
+            }
             sendWhatsapp(phone, clientMsg);
         }
 
