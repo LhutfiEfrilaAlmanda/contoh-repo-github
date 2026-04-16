@@ -156,16 +156,29 @@ async function sendWhatsapp(target, message) {
         console.warn('[WA SKIP] Token atau Target kosong');
         return;
     }
+
+    // Otomatis ubah format 08... menjadi 628...
+    let formattedTarget = target.toString().replace(/[^0-9]/g, '');
+    if (formattedTarget.startsWith('0')) {
+        formattedTarget = '62' + formattedTarget.slice(1);
+    }
+
     try {
+        console.log(`[WA ATTEMPT] Mengirim ke ${formattedTarget}...`);
         const response = await axios.post('https://api.fonnte.com/send', {
-            target: target,
+            target: formattedTarget,
             message: message
         }, {
             headers: { 'Authorization': token }
         });
-        console.log('[WA SENT]', target, response.data.status ? 'Success' : 'Failed');
+        
+        if (response.data && response.data.status) {
+            console.log('[WA SUCCESS]', formattedTarget);
+        } else {
+            console.error('[WA FAILED]', formattedTarget, response.data?.reason || 'Unknown Reason');
+        }
     } catch (err) {
-        console.error('[WA ERROR]', err.message);
+        console.error('[WA ERROR]', formattedTarget, err.response?.data?.reason || err.message);
     }
 }
 
