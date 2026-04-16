@@ -348,16 +348,20 @@ async function initDB() {
             }
 
             // MIGRASI PERBAIKAN: Hubungkan Indikator Yatim (tanpa target_id) ke Target yang Benar
-            await conn.query(`
-                UPDATE sdgs_indikator i
-                JOIN sdgs_target t ON (
-                    i.kode_indikator LIKE CONCAT(t.kode_target, '.%') OR 
-                    i.kode_indikator = t.kode_target
-                )
-                SET i.target_id = t.id
-                WHERE i.target_id IS NULL OR i.target_id = '' OR i.target_id NOT IN (SELECT id FROM sdgs_target)
-            `);
-            console.log('[MIGRATION] Orphan indicators linked to targets.');
+            try {
+                await conn.query(`
+                    UPDATE sdgs_indikator i
+                    JOIN sdgs_target t ON (
+                        i.kode_indikator LIKE CONCAT(t.kode_target, '.%') OR 
+                        i.kode_indikator = t.kode_target
+                    )
+                    SET i.target_id = t.id
+                    WHERE (i.target_id IS NULL OR i.target_id = '' OR i.target_id = 'null')
+                `);
+                console.log('[MIGRATION] Orphan indicators linked to targets.');
+            } catch (migErr) {
+                console.warn('[MIGRATION WARNING] Gagal sinkronisasi otomatis indikator:', migErr.message);
+            }
 
             // SEED KELOLA_PROGRAM (Data Programs)
             const [progRows] = await conn.query('SELECT COUNT(*) as count FROM kelola_program');
