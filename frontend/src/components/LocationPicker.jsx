@@ -183,7 +183,7 @@ export default function LocationPicker({ defaultValue = '', onChange }) {
             </div>
             
             {/* Hidden Input for Form Submission Compatibility */}
-            <input type="hidden" name="location" value={defaultValue || ''} />
+            <input type="hidden" name="location" value={locationString} />
 
             {loading && <div className="text-[10px] text-indigo-500 font-bold animate-pulse ml-1">📍 Sedang memuat data wilayah...</div>}
         </div>
