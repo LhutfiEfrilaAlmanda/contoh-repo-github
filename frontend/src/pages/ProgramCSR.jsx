@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Layers, Settings2 } from 'lucide-react';
+import LocationPicker from '../components/LocationPicker';
 
 export default function ProgramCSR() {
     const [activeTab, setActiveTab] = useState('kelompok'); // 'kelompok' | 'kelola'
@@ -213,11 +214,9 @@ export default function ProgramCSR() {
                                 <option value="">Pilih Kategori</option>
                                 {categories.map(c => { const name = typeof c === 'object' ? c.name : c; return <option key={name} value={name}>{name}</option>; })}
                             </select>
-                            <select name="location" defaultValue={editItem?.location || ''}
-                                className="bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium">
-                                <option value="">Pilih Lokasi</option>
-                                {locations.map(l => { const name = typeof l === 'object' ? l.name : l; return <option key={name} value={name}>{name}</option>; })}
-                            </select>
+                            <div className="md:col-span-2 bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200">
+                                <LocationPicker defaultValue={editItem?.location || ''} />
+                            </div>
                             <input name="budget" required type="number" placeholder="Anggaran" defaultValue={editItem?.budget ? Number(editItem.budget) : ''}
                                 className="bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium" />
                             <input name="year" required type="number" placeholder="Tahun Program (Contoh: 2024)" defaultValue={editItem?.year || new Date().getFullYear()}
