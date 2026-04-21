@@ -291,7 +291,14 @@ const Home = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
                 {[
                     { label: 'PROGRAM BERJALAN', val: programs.length.toString() },
-                    { label: 'TOTAL DANA TERHIMPUN', val: 'Rp ' + (totalAllocated / 1e9).toFixed(1) + ' M' },
+                    { 
+                        label: 'TOTAL DANA TERHIMPUN', 
+                        val: totalAllocated >= 1e9 
+                            ? 'Rp ' + (totalAllocated / 1e9).toFixed(1) + ' M' 
+                            : totalAllocated >= 1e6 
+                                ? 'Rp ' + (totalAllocated / 1e6).toFixed(1) + ' Jt' 
+                                : 'Rp ' + totalAllocated.toLocaleString('id-ID')
+                    },
                     { label: 'SEKTOR PRIORITAS', val: categories.length.toString() },
                     { label: 'TARGET PENERIMA', val: '15.400+' }
                 ].map((s, i) => (
