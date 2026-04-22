@@ -2,7 +2,13 @@ import axios from 'axios';
 
 // Gunakan env variable untuk production, fallback ke /api untuk proxy/same-origin
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-export const BASE_URL = API_URL.startsWith('http') ? API_URL.replace(/\/api$/, '') : '';
+
+// Deteksi otomatis backend: Jika di portalcrs.online, arahkan file ke ip/domain backend asli
+export const BASE_URL = API_URL.startsWith('http') 
+    ? API_URL.replace(/\/api$/, '') 
+    : (window.location.hostname === 'portalcrs.online' ? 'https://api.portalcrs.online' : '');
+
+console.log("BASE_URL Detected:", BASE_URL || "Relative Mode (Vercel)");
 
 const api = axios.create({
     baseURL: API_URL,
