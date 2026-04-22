@@ -3,10 +3,10 @@ import axios from 'axios';
 // Gunakan env variable untuk production, fallback ke /api untuk proxy/same-origin
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Deteksi otomatis backend: Jika di portalcsr.online, arahkan file ke ip Bapak langsung (port 5000)
+// Deteksi otomatis backend: Jika di portalcsr.online, gunakan domain tersebut untuk file
 export const BASE_URL = API_URL.startsWith('http') 
     ? API_URL.replace(/\/api$/, '') 
-    : (window.location.hostname === 'portalcsr.online' ? 'http://103.253.212.126:5000' : '');
+    : (window.location.hostname === 'portalcsr.online' ? 'https://portalcsr.online' : '');
 
 console.log("BASE_URL Detected:", BASE_URL || "Relative Mode (Vercel)");
 
