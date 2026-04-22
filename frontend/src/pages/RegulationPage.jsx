@@ -42,7 +42,17 @@ const RegulationPage = () => {
                             </div>
                             <p className="text-slate-600 text-sm mb-6 leading-relaxed line-clamp-3">{r.description}</p>
                             {r.fileUrl ? (
-                                <a href={`${BASE_URL}${r.fileUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider hover:gap-4 transition-all">
+                                <a 
+                                    href={r.fileUrl.startsWith('http') ? r.fileUrl : `${BASE_URL}${r.fileUrl}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    download
+                                    className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider hover:gap-4 transition-all"
+                                    onClick={(e) => {
+                                        // Mencegah intercept oleh React Router jika link relatif
+                                        e.stopPropagation();
+                                    }}
+                                >
                                     Unduh Berkas →
                                 </a>
                             ) : (
