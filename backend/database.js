@@ -141,7 +141,7 @@ async function initDB() {
                 menus TEXT,
                 color TEXT
             )`);
-            try { await conn.query('ALTER TABLE peran_sistem ADD COLUMN columns_config TEXT'); } catch (e) {}
+            try { await conn.query('ALTER TABLE peran_sistem ADD COLUMN columns_config TEXT'); } catch (e) { }
 
             // SDGS_TUJUAN
             await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_tujuan (
@@ -152,7 +152,7 @@ async function initDB() {
                 warna TEXT,
                 gambar TEXT
             )`);
-            try { await conn.query('ALTER TABLE sdgs_tujuan ADD COLUMN gambar TEXT'); } catch(e) {}
+            try { await conn.query('ALTER TABLE sdgs_tujuan ADD COLUMN gambar TEXT'); } catch (e) { }
 
             // SDGS_PILAR
             await conn.query(`CREATE TABLE IF NOT EXISTS sdgs_pilar (
@@ -293,7 +293,7 @@ async function initDB() {
                     ['pil-4', 'P4', 'Lingkungan', 'Pilar pelestarian lingkungan hidup dan perubahan iklim.']
                 ];
                 for (const p of initPillars) { await conn.query('INSERT IGNORE INTO sdgs_pilar (id, kode_pilar, nama_pilar, keterangan) VALUES (?, ?, ?, ?)', p); }
-                
+
                 const mapping = [
                     // P2 Kesehatan -> 2, 3, 6
                     ['map-1', 'pil-2', 'sdg-2'], ['map-2', 'pil-2', 'sdg-3'], ['map-3', 'pil-2', 'sdg-6'],
@@ -405,4 +405,4 @@ async function initDB() {
     }
 }
 
-module.exports = { pool, initDB };
+module.exports = { get pool() { return pool; }, initDB };
