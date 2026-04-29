@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../database.js');
+const db = require('../database.js');
 const { getHandler, createNotification } = require('../utils/helpers.js');
 
 // Programs List
 router.get('/programs', async (req, res) => {
     try {
-        const [rows] = await pool.query(`
+        const [rows] = await db.pool.query(`
             SELECT p.*, 
             (SELECT COALESCE(SUM(commitmentAmount), 0) 
              FROM kontribusi_mitra_csr 
@@ -41,7 +41,7 @@ router.post('/programs', async (req, res) => {
     const { title, description, category, budget, year, location, beneficiaries, image, impactScore, tags } = req.body;
     const stringTags = tags ? (typeof tags === 'string' ? tags : JSON.stringify(tags)) : '[]';
     try {
-        const [rows] = await pool.query('SELECT id FROM kelola_program');
+        const [rows] = await db.pool.query('SELECT id FROM kelola_program');
         let maxNum = 0;
         rows.forEach(row => {
             const match = row.id.match(/p-(\d+)/);
@@ -51,7 +51,7 @@ router.post('/programs', async (req, res) => {
             }
         });
         const newId = `p-${maxNum + 1}`;
-        await pool.query(
+        await db.pool.query(
             `INSERT INTO kelola_program (id, title, description, category, budget, year, location, beneficiaries, image, impactScore, tags)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [newId, title, description || '', category, budget, year, location || '', beneficiaries || '', image || '', impactScore || 0, stringTags]
@@ -65,7 +65,7 @@ router.put('/programs/:id', async (req, res) => {
     const { title, description, category, budget, year, location, beneficiaries, image, impactScore, tags } = req.body;
     const stringTags = tags ? (typeof tags === 'string' ? tags : JSON.stringify(tags)) : '[]';
     try {
-        await pool.query(
+        await db.pool.query(
             `UPDATE kelola_program SET title=?, description=?, category=?, budget=?, year=?, location=?, beneficiaries=?, image=?, impactScore=?, tags=? WHERE id=?`,
             [title, description || '', category, budget, year, location || '', beneficiaries || '', image || '', impactScore || 0, stringTags, req.params.id]
         );
@@ -83,10 +83,10 @@ router.post('/categories', async (req, res) => {
     const { name, oldName } = req.body;
     try {
         if (oldName && oldName !== name) {
-            await pool.query('UPDATE kelompok_program SET name = ? WHERE name = ?', [name, oldName]);
-            await pool.query('UPDATE kelola_program SET category = ? WHERE category = ?', [name, oldName]);
+            await db.pool.query('UPDATE kelompok_program SET name = ? WHERE name = ?', [name, oldName]);
+            await db.pool.query('UPDATE kelola_program SET category = ? WHERE category = ?', [name, oldName]);
         } else {
-            await pool.query('INSERT IGNORE INTO kelompok_program (name) VALUES (?)', [name]);
+            await db.pool.query('INSERT IGNORE INTO kelompok_program (name) VALUES (?)', [name]);
         }
         await createNotification(oldName ? `Kategori program "${oldName}" diubah menjadi "${name}".` : `Kategori program baru ditambahkan: ${name}`, 'info');
         res.json({ success: true });
@@ -97,10 +97,10 @@ router.post('/locations', async (req, res) => {
     const { name, oldName } = req.body;
     try {
         if (oldName && oldName !== name) {
-            await pool.query('UPDATE wilayah_kerja SET name = ? WHERE name = ?', [name, oldName]);
-            await pool.query('UPDATE kelola_program SET location = ? WHERE location = ?', [name, oldName]);
+            await db.pool.query('UPDATE wilayah_kerja SET name = ? WHERE name = ?', [name, oldName]);
+            await db.pool.query('UPDATE kelola_program SET location = ? WHERE location = ?', [name, oldName]);
         } else {
-            await pool.query('INSERT IGNORE INTO wilayah_kerja (name) VALUES (?)', [name]);
+            await db.pool.query('INSERT IGNORE INTO wilayah_kerja (name) VALUES (?)', [name]);
         }
         await createNotification(oldName ? `Wilayah kerja "${oldName}" diubah menjadi "${name}".` : `Wilayah kerja baru ditambahkan: ${name}`, 'info');
         res.json({ success: true });
@@ -110,7 +110,7 @@ router.post('/locations', async (req, res) => {
 router.post('/fiscal-years', async (req, res) => {
     const { year, status, description } = req.body;
     try {
-        const [rows] = await pool.query('SELECT id FROM tahun_fiskal');
+        const [rows] = await db.pool.query('SELECT id FROM tahun_fiskal');
         let maxNum = 0;
         rows.forEach(row => {
             const match = row.id.match(/fy-(\d+)/);
@@ -120,7 +120,7 @@ router.post('/fiscal-years', async (req, res) => {
             }
         });
         const newId = `fy-${maxNum + 1}`;
-        await pool.query(`INSERT INTO tahun_fiskal (id, year, status, description) VALUES (?, ?, ?, ?)`,
+        await db.pool.query(`INSERT INTO tahun_fiskal (id, year, status, description) VALUES (?, ?, ?, ?)`,
             [newId, year, status || 'Active', description || '']);
         await createNotification(`Tahun fiskal baru ditambahkan: ${year}`, 'success');
         res.json({ success: true, id: newId });
@@ -130,7 +130,7 @@ router.post('/fiscal-years', async (req, res) => {
 router.put('/fiscal-years/:id', async (req, res) => {
     const { year, status, description } = req.body;
     try {
-        await pool.query(`UPDATE tahun_fiskal SET year=?, status=?, description=? WHERE id=?`,
+        await db.pool.query(`UPDATE tahun_fiskal SET year=?, status=?, description=? WHERE id=?`,
             [year, status || 'Active', description || '', req.params.id]);
         await createNotification(`Tahun fiskal ${year} diperbarui.`, 'info');
         res.json({ success: true });

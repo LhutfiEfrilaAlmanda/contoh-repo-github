@@ -1,12 +1,12 @@
 const axios = require('axios');
 const path = require('path');
-const { pool } = require('../database.js');
+const db = require('../database.js');
 
 // NOTIFICATION HELPER
 const createNotification = async (message, type = 'info') => {
     try {
         const id = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        await pool.query('INSERT INTO notifikasi (id, message, type) VALUES (?, ?, ?)', [id, message, type]);
+        await db.pool.query('INSERT INTO notifikasi (id, message, type) VALUES (?, ?, ?)', [id, message, type]);
         console.log('[NOTIF]', message);
     } catch (err) { console.error('Failed to create notification:', err); }
 };
@@ -52,7 +52,7 @@ const getHandler = (tableName, mapFunc) => async (req, res) => {
         } else if (['kelola_program', 'direktori_mitra_csr', 'regulasi', 'pengguna', 'kontribusi_mitra_csr'].includes(tableName)) {
             orderBy = ' ORDER BY LENGTH(id), id ASC';
         }
-        const [rows] = await pool.query(`SELECT * FROM ${tableName}${orderBy}`);
+        const [rows] = await db.pool.query(`SELECT * FROM ${tableName}${orderBy}`);
         res.json(mapFunc ? rows.map(mapFunc) : rows);
     } catch (err) {
         console.error('API ERROR:', err); res.status(500).json({ error: err.message });
@@ -68,7 +68,7 @@ const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
             'kelompok_program', 'sektor_industri', 'wilayah_kerja', 'peran_sistem'
         ];
         if (monitoredTables.includes(tableName)) {
-            const [rows] = await pool.query(`SELECT * FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
+            const [rows] = await db.pool.query(`SELECT * FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
             if (rows.length > 0) {
                 const row = rows[0];
                 const name = row.title || row.companyName || row.name || row.role_name || row.year || req.params.id;
@@ -82,7 +82,7 @@ const deleteHandler = (tableName, idField = 'id') => async (req, res) => {
             }
         }
         
-        const [result] = await pool.query(`DELETE FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
+        const [result] = await db.pool.query(`DELETE FROM ${tableName} WHERE ${idField} = ?`, [req.params.id]);
         res.json({ success: true, changes: result.affectedRows });
     } catch (err) {
         console.error('API ERROR:', err); res.status(500).json({ error: err.message });
